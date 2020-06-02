@@ -1,0 +1,21 @@
+seed	12345
+app_style	chemistry
+solve_style	linear
+volume	1
+add_species 	G
+add_species 	GS
+add_species 	M
+add_species 	P
+add_species 	D
+add_reaction	1 G 2 GS
+add_reaction	2 GS 0.105758 G
+add_reaction	3 GS 4 GS M
+add_reaction	4 M 0.0005 D
+add_reaction	5 M 0.6 M P
+add_reaction	6 P 0.2 D
+count	G 1
+count	GS 0
+count	M 0
+count	P 0
+count	D 0
+run	120
