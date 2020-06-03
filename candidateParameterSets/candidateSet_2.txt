@@ -8,9 +8,9 @@ add_species 	M
 add_species 	P
 add_species 	D
 add_reaction	1 G 2 GS
-add_reaction	2 GS 0.1 G
+add_reaction	2 GS 0.0902215 G
 add_reaction	3 GS 4 GS M
-add_reaction	4 M 0.000470089 D
+add_reaction	4 M 0.0005 D
 add_reaction	5 M 0.6 M P
 add_reaction	6 P 0.2 D
 count	G 1

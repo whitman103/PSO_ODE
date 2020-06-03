@@ -35,11 +35,11 @@ Running with 32-bit site IDs
 Memory usage per processor = 0 Mbytes
         CPU
           0
-Loop time of 0.108846 on 1 procs
+Loop time of 0.115515 on 1 procs
 
 Solve time (%) = 0 (0)
 Update time (%) = 0 (0)
 Comm  time (%) = 0 (0)
 Outpt time (%) = 0 (0)
 App   time (%) = 0 (0)
-Other time (%) = 0.108846 (100)
+Other time (%) = 0.115515 (100)

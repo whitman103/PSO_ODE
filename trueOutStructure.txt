@@ -1,0 +1,4 @@
+#m N: species Power Constant Norm
+2
+0 2 0 2 11 2.87984 1 2 4 0.450555 
+1 1 0 2 8 0.631785 

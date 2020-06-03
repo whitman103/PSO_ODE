@@ -12,7 +12,7 @@ add_reaction	2 GS 0.1 G
 add_reaction	3 GS 4 GS M
 add_reaction	4 M 0.0005 D
 add_reaction	5 M 0.6 M P
-add_reaction	6 P 0.200867 D
+add_reaction	6 P 0.206805 D
 count	G 1
 count	GS 0
 count	M 0

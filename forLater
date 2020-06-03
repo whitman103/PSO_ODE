@@ -1,0 +1,19 @@
+vector<double> experDist;
+	loadExperimentData(experDist);
+	
+	vector<double> currentBestParameters={2,.1,4,0.0005,.6,.2};
+	
+	
+	ofstream nextParameters("candidateParameterSets\\nextParameters.txt");
+	int swarmSize(10);
+	nextParameters<<swarmSize<<"\n";
+	for(int i=0;i<swarmSize;i++){
+		vector<double> prospectiveParameters=currentBestParameters;
+		prospectiveParameters[randSite(prospectiveParameters.size())]*=(1+.1*(2*randPull()-1.));
+		for(int j=0;j<(int)prospectiveParameters.size();j++){
+			nextParameters<<prospectiveParameters[j]<<",";
+		}
+		nextParameters<<endl;
+	}
+	nextParameters.close();
+	system("python createSpparksInputs.py");
