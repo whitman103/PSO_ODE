@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <string>
 #include <sstream>
+#include <mpi.h>
 	using namespace std;
 #include <boost/random/mersenne_twister.hpp>
 	boost::mt19937 generator;
@@ -69,7 +70,7 @@ typedef struct{
 void loadExperimentData(vector<double>& inData);
 double hillFunctionTerm(hillStruct& inStruct,double currentPos);
 vector<vector<double> > rungeKuttaIteration(vector<double>& species, vector<vector<hillStruct> > hillIds, double deltaT, double currentTime, double stoppingTime, vector<double> printTimes);
-void loadHillStructDetails(vector<vector<hillStruct> >& inStructure);
+void loadHillStructDetails(vector<vector<hillStruct> >& inStructure, string inFile);
 void dumpStructure(particle inParticle, int particleCount);
 	
 int main(){
@@ -79,13 +80,17 @@ int main(){
 	//system("./spk_serial < in.Base");
 	
 	
-	const int numOfSpecies(2);
 	
-	vector<double> speciesIn={2,5};
-	vector<double> speciesReset=speciesIn;
+	
+	
+	string baseHillStructure("randomHillStructure");
 	
 	vector<vector<hillStruct> > hillDetails;
-	loadHillStructDetails(hillDetails);
+	loadHillStructDetails(hillDetails, baseHillStructure);
+	
+	int speciesInSize(hillDetails.size());
+	vector<double> speciesIn={2,5,10,3,5};
+	vector<double> speciesReset=speciesIn;
 	
 	vector<vector<tuple<double,double> > > baseParameters(speciesIn.size());
 	
@@ -129,13 +134,13 @@ int main(){
 	
 	const int numParticles(20);
 	
-	vector<particle> particleSwarm(20);
+	vector<particle> particleSwarm(numParticles);
 	
 	//initialize particleSwarm
 	
 	for(int i=0;i<(int)particleSwarm.size();i++){
 		particle interParticle;
-		loadHillStructDetails(interParticle.sampleSolution);
+		loadHillStructDetails(interParticle.sampleSolution,baseHillStructure);
 		interParticle.currentPosition.resize(interParticle.sampleSolution.size());
 		interParticle.currentVelocity.resize(interParticle.sampleSolution.size());
 		interParticle.currentWellness=0;
@@ -143,7 +148,7 @@ int main(){
 			interParticle.currentPosition[species].resize(interParticle.sampleSolution[species].size());
 			interParticle.currentVelocity[species].resize(interParticle.sampleSolution[species].size());
 			for(int interaction=0;interaction<(int)interParticle.sampleSolution[species].size();interaction++){
-				interParticle.currentPosition[species][interaction]=make_tuple(15*twoSidedRandPull(),randSite(30));
+				interParticle.currentPosition[species][interaction]=make_tuple(15*randPull(),randSite(30));
 				interParticle.currentVelocity[species][interaction]=make_tuple(0,0);
 			}
 		}
@@ -162,11 +167,12 @@ int main(){
 				auto[interNorm,interConstant]=(*currentParticle).currentPosition[i][j];
 				(*currentParticle).sampleSolution[i][j].normalization=interNorm;
 				(*currentParticle).sampleSolution[i][j].constant=interConstant;
+				(*currentParticle).sampleSolution[i][j].hillBool=true;
 			}
 		}
 		speciesIn=speciesReset;
 		vector<vector<double> > currentTest=rungeKuttaIteration(speciesIn, (*currentParticle).sampleSolution, 0.01, 0, 65, printTimes);
-		
+			
 		double MSE(0);
 		for(int i=0;i<(int)currentTest.size();i++){
 			for(int j=0;j<(int)currentTest[i].size();j++){
@@ -183,70 +189,16 @@ int main(){
 	
 	cout<<currentBestMSE<<endl;
 	//first update of solutions
-	
-	for(int sol=0;sol<(int)particleSwarm.size();sol++){
-		double c1(2), c2(2);
-		particle* currentParticle=&particleSwarm[sol];
-		for(int i=0;i<(int)(*currentParticle).currentVelocity.size();i++){
-			for(int j=0;j<(int)(*currentParticle).currentVelocity[j].size();j++){
-				double rand1(randPull());
-				double rand2(randPull());
-				auto[currentNorm,currentConst]=(*currentParticle).currentPosition[i][j];
-				auto[curBestNorm,curBestConst]=(*currentParticle).bestPosition[i][j];
-				auto[groupBestNorm,groupBestConst]=particleSwarm[indexOfBestFit].currentPosition[i][j];
-				get<0>((*currentParticle).currentVelocity[i][j])+=c1*rand1*(curBestNorm-currentNorm)+c2*rand2*(groupBestNorm-currentNorm);
-				get<1>((*currentParticle).currentVelocity[i][j])+=c1*rand1*(curBestConst-currentConst)+c2*rand2*(groupBestConst-currentConst);
-				get<0>((*currentParticle).currentPosition[i][j])+=get<0>((*currentParticle).currentVelocity[i][j]);
-				get<1>((*currentParticle).currentPosition[i][j])+=get<1>((*currentParticle).currentVelocity[i][j]);
-			}
-		}
-		
-	}
-	
 	int goodSolutions(0);
+	particle bestParticle;
 	for(int iteration=0;iteration<1000;iteration++){
 		cout<<iteration<<endl;
-		indexOfBestFit=0;
-		currentBestMSE=1e13;
-		for(int sol=0;sol<(int)particleSwarm.size();sol++){
-			particle* currentParticle=&particleSwarm[sol];
-			for(int i=0;i<(int)(*currentParticle).sampleSolution.size();i++){
-				for(int j=0;j<(int)(*currentParticle).sampleSolution[i].size();j++){
-					auto[interNorm,interConstant]=(*currentParticle).currentPosition[i][j];
-					(*currentParticle).sampleSolution[i][j].normalization=interNorm;
-					(*currentParticle).sampleSolution[i][j].constant=interConstant;
-				}
-			}
-			speciesIn=speciesReset;
-			vector<vector<double> > currentTest=rungeKuttaIteration(speciesIn, (*currentParticle).sampleSolution, 0.01, 0, 65, printTimes);
-			
-			double MSE(0);
-			for(int i=0;i<(int)currentTest.size();i++){
-				for(int j=0;j<(int)currentTest[i].size();j++){
-					MSE+=pow(currentTest[i][j]-testingData[i][j],2);
-				}
-			}
-			(*currentParticle).currentWellness=MSE;
-			if(MSE<currentBestMSE){
-				indexOfBestFit=sol;
-				currentBestMSE=MSE;
-			}
-			if(MSE<(*currentParticle).bestWellness){
-				(*currentParticle).bestPosition=(*currentParticle).currentPosition;
-				(*currentParticle).bestWellness=MSE;
-			}
-			if(MSE<1000){
-				dumpStructure((*currentParticle),goodSolutions);
-				goodSolutions++;
-			}
-		}
-		
-		
+		cout<<currentBestMSE<<endl;
 		for(int sol=0;sol<(int)particleSwarm.size();sol++){
 			double c1(2), c2(2);
 			particle* currentParticle=&particleSwarm[sol];
 			for(int i=0;i<(int)(*currentParticle).currentVelocity.size();i++){
-				for(int j=0;j<(int)(*currentParticle).currentVelocity[j].size();j++){
+				for(int j=0;j<(int)(*currentParticle).currentVelocity[i].size();j++){
 					double rand1(randPull());
 					double rand2(randPull());
 					auto[currentNorm,currentConst]=(*currentParticle).currentPosition[i][j];
@@ -276,9 +228,56 @@ int main(){
 					get<1>((*currentParticle).currentPosition[i][j])+=get<1>((*currentParticle).currentVelocity[i][j]);
 				}
 			}
-	
 		}
+	
+	
+	
+		
+		for(int sol=0;sol<(int)particleSwarm.size();sol++){
+			particle* currentParticle=&particleSwarm[sol];
+			for(int i=0;i<(int)(*currentParticle).sampleSolution.size();i++){
+				for(int j=0;j<(int)(*currentParticle).sampleSolution[i].size();j++){
+					auto[interNorm,interConstant]=(*currentParticle).currentPosition[i][j];
+					(*currentParticle).sampleSolution[i][j].normalization=interNorm;
+					(*currentParticle).sampleSolution[i][j].constant=interConstant;
+				}
+			}
+			speciesIn=speciesReset;
+			vector<vector<double> > currentTest=rungeKuttaIteration(speciesIn, (*currentParticle).sampleSolution, 0.01, 0, 65, printTimes);
+			
+			
+			double MSE(0);
+			for(int i=0;i<(int)currentTest.size();i++){
+				for(int j=0;j<(int)currentTest[i].size();j++){
+					MSE+=pow(currentTest[i][j]-testingData[i][j],2);
+				}
+			}
+			(*currentParticle).currentWellness=MSE;
+			if(MSE<currentBestMSE){
+				indexOfBestFit=sol;
+				currentBestMSE=MSE;
+				bestParticle=(*currentParticle);
+			}
+			if(MSE<(*currentParticle).bestWellness){
+				(*currentParticle).bestPosition=(*currentParticle).currentPosition;
+				(*currentParticle).bestWellness=MSE;
+			}
+			if(MSE<1000){
+				dumpStructure((*currentParticle),goodSolutions);
+				goodSolutions++;
+			}
+		}
+		cout<<indexOfBestFit<<" "<<currentBestMSE<<endl;
+		cout<<endl;
+		
 	}
+	
+	for(int i=0;i<(int)particleSwarm.size();i++){
+		dumpStructure(particleSwarm[i], goodSolutions);
+		goodSolutions++;
+	}
+	
+	dumpStructure(bestParticle,goodSolutions);
 	
 	cout<<currentBestMSE<<endl;
 	
@@ -305,10 +304,10 @@ void dumpStructure(particle inParticle, int particleCount){
 	outParticle.close();
 }
 
-void loadHillStructDetails(vector<vector<hillStruct> >& inStructure){
-	ifstream inData("hillStructureDefinition.txt");
+void loadHillStructDetails(vector<vector<hillStruct> >& inStructure, string inFile){
+	ifstream inData(inFile+".txt");
 	if(!inData.good()){
-		cout<<"Failed to open hillStructureDefinition.txt"<<endl;
+		cout<<"Failed to open "+inFile+".txt"<<endl;
 	}
 	int numberOfSpecies(0);
 	inData>>numberOfSpecies;
@@ -324,6 +323,7 @@ void loadHillStructDetails(vector<vector<hillStruct> >& inStructure){
 			interStruct.power=coefficient;
 			interStruct.speciesLabel=index1;
 			structureVector[j]=interStruct;
+			interStruct.hillBool=true;
 		}
 		inStructure.push_back(structureVector);
 	}

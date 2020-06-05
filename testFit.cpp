@@ -40,43 +40,51 @@ int main(){
 	vector<vector<hillStruct> > baseData;
 	loadHillStruct(baseData,"trueOutStructure");
 	
-	vector<double> speciesIn={2,5};
+	vector<double> speciesIn={2,5,10,3,5};
 	vector<double> speciesReset=speciesIn;
 	
 	vector<double> printTimes={2,4,8,16,32};
 	
-	vector<vector<double> > testingData=rungeKuttaIteration(speciesIn, baseData, 0.01, 0, 65, printTimes);
+	vector<vector<double> > currentTest=rungeKuttaIteration(speciesIn, baseData, 0.01, 0, 65, printTimes);
 	
-	ofstream trueOutData("trueOutData.txt");
+	ofstream trueOutData("trueOutData_1.txt");
 	
-	for(int i=0;i<(int)testingData.size();i++){
+	for(int i=0;i<(int)currentTest.size();i++){
 		trueOutData<<printTimes[i]<<" ";
-		for(int j=0;j<(int)testingData[i].size();j++){
-			trueOutData<<testingData[i][j]<<" ";
+		for(int j=0;j<(int)currentTest[i].size();j++){
+			trueOutData<<currentTest[i][j]<<" ";
 		}
 		trueOutData<<endl;
 	}
 	
 	trueOutData.close();
 	
+	for(int fit=0;fit<21;fit++){
 	
-	speciesIn=speciesReset;
-	vector<vector<hillStruct> > testData;
-	loadHillStruct(testData,"outFits\\goodFit_26");
-	
-	testingData=rungeKuttaIteration(speciesIn, testData, 0.01, 0, 65, printTimes);
-	
-	trueOutData.open("testOutData.txt");
-	
-	for(int i=0;i<(int)testingData.size();i++){
-		trueOutData<<printTimes[i]<<" ";
-		for(int j=0;j<(int)testingData[i].size();j++){
-			trueOutData<<testingData[i][j]<<" ";
+		speciesIn=speciesReset;
+		vector<vector<hillStruct> > testData;
+		loadHillStruct(testData,"outFits\\goodFit_"+to_string(fit));
+		
+		vector<vector<double> > testingData=rungeKuttaIteration(speciesIn, testData, 0.01, 0, 65, printTimes);
+		double MSE(0);
+		for(int i=0;i<(int)currentTest.size();i++){
+			for(int j=0;j<(int)currentTest[i].size();j++){
+				MSE+=pow(currentTest[i][j]-testingData[i][j],2);
+			}
 		}
-		trueOutData<<endl;
+		cout<<MSE<<endl;
+		trueOutData.open("testOutData.txt");
+		
+		for(int i=0;i<(int)testingData.size();i++){
+			trueOutData<<printTimes[i]<<" ";
+			for(int j=0;j<(int)testingData[i].size();j++){
+				trueOutData<<testingData[i][j]<<" ";
+			}
+			trueOutData<<endl;
+		}
+		
+		trueOutData.close();
 	}
-	
-	trueOutData.close();
 	
 	
 	
@@ -92,7 +100,6 @@ void loadHillStruct(vector<vector<hillStruct> >& inStruct, string toOpen){
 		getline(inData,firstIn);
 		int numOfSpecies(0);
 		inData>>numOfSpecies;
-		cout<<numOfSpecies<<endl;
 		inStruct.resize(numOfSpecies);
 		int intHold(0);
 		double doubleHold(0);
