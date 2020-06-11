@@ -17,6 +17,8 @@ class FuzzyTree{
 	double delta, delta1, delta2, delta3, deltaMax;
 	//phi Membership values are set as better, same, worse
 	vector<double> phiMembershipValues;
+	
+	
 	//delta Membership values are set as same, near, far
 	vector<double> deltaMembershipValues;
 	
@@ -45,12 +47,37 @@ class FuzzyTree{
 	
 	private:
 	
-	
-	
-	
 };
 
+typedef struct{
+	bool hillBool;
+	double constant;
+	double power;
+	double normalization;
+	int speciesLabel;
+} hillStruct;
 
+class Particle{
+	public:
+	Particle(vector<vector<hillStruct> > inSolution, tuple<double,double,double> bounds);
+	~Particle();
+	vector<vector<hillStruct> > sampleSolution;
+	vector<vector<double> > normCurrentPos;
+	vector<vector<double> > normBestPos;
+	vector<vector<double> > normVelocity;
+	vector<vector<double> > constCurrentPos;
+	vector<vector<double> > constBestPos;
+	vector<vector<double> > constVelocity;
+	vector<double> decayConsts;
+	vector<double> decayVelocities;
+	vector<double> bestDecayConsts;
+	double bestWellness;
+	double currentWellness;
+	tuple<double,double> constBounds;
+	tuple<double,double> normBounds;
+	double decayBound;
+	private:
+};
 
 
 

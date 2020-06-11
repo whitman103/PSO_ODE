@@ -46,8 +46,7 @@ void FuzzyTree::setParameters(){
 	setSocial();
 	setCognitive();
 	setL();
-	
-	
+	setU();
 }
 
 void FuzzyTree::calculateDeltaMembershipValues(){
@@ -114,7 +113,37 @@ void FuzzyTree::setL(){
 }
 
 void FuzzyTree::setU(){
-	
+	U=0;
+	U+=UMap["Low"]*(deltaMembershipValues[0]);
+	U+=UMap["Medium"]*(phiMembershipValues[0]+phiMembershipValues[1]+deltaMembershipValues[1]);
+	U+=UMap["High"]*(phiMembershipValues[2]+deltaMembershipValues[2]);
+	U/=2.;
 }
 
-	
+Particle::Particle(vector<vector<hillStruct> > inSolution, tuple<double,double,double> bounds){
+	sampleSolution=inSolution;
+	int numSpecies=sampleSolution.size();
+	normCurrentPos.resize(numSpecies);
+	normBestPos.resize(numSpecies);
+	normVelocity.resize(numSpecies);
+	constCurrentPos.resize(numSpecies);
+	constBestPos.resize(numSpecies);
+	constVelocity.resize(numSpecies);
+	decayConsts.resize(numSpecies);
+	decayVelocities.resize(numSpecies);
+	bestDecayConsts.resize(numSpecies);
+	bestWellness=0;
+	currentWellness=0;
+	constBounds=make_tuple(-1.*get<0>(bounds),get<0>(bounds));
+	normBounds=make_tuple(-1.*get<1>(bounds),get<1>(bounds));
+	decayBound=get<2>(bounds);
+	for(int i=0;i<(int)inSolution.size();i++){
+		int numInteractions=inSolutions[i].size();
+		normCurrentPos[i].resize(numInteractions);
+		normBestPos[i].resize(numInteractions);
+		normVelocity[i].resize(numInteractions);
+		constCurrentPos[i].resize(numInteractions);
+		constBestPos[i].resize(numInteractions);
+		constVelocity[i].resize(numInteractions);
+	}
+}

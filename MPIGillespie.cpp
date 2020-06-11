@@ -9,6 +9,7 @@
 #include <string>
 #include <sstream>
 #include "GillespieFunctions.h"
+#include "fuzzyDef.h"
 #include <mpi.h>
 using namespace std;
 #include <boost/random/mersenne_twister.hpp>
@@ -36,25 +37,6 @@ inline double Hill(double constant, double power, double argument,double norm){
 	return norm*pow(argument,power)/(pow(constant,power)+pow(argument,power));
 }
 
-typedef struct{
-	bool hillBool;
-	double constant;
-	double power;
-	double normalization;
-	int speciesLabel;
-} hillStruct;
-
-typedef struct{
-	vector<vector<hillStruct> > sampleSolution;
-	vector<vector<tuple<double,double> > > bestPosition;
-	vector<vector<tuple<double,double> > > currentPosition; //Normalization constant
-	vector<vector<tuple<double,double> > > currentVelocity;
-	vector<double> decayConsts;
-	vector<double> decayVelocities;
-	vector<double> bestDecayConsts;
-	double bestWellness;
-	double currentWellness;
-} particle;
 
 tuple<int,vector<double>> DistributionFromValues(vector<double> Values);
 double returnMean(vector<double> inDist);
@@ -86,12 +68,45 @@ int main(int argc, char* argv[]){
 	double gamma(1./2000.);
 	
 	int numParticles(2);
-	vector<particle> particleSwarm;
+	vector<Particle> particleSwarm;
+	
+	double constBound(0), normBound(0), decayBound(0);
 	
 	for(int i=0;i<numParticles;i++){
-		particle interParticle;
-		interParticle.sampleSolution=hillDetails;
+		Particle interParticle=Particle(hillDetails,make_tuple(constBound,normBound,decayBound));
+		for(int species=0;species<(int)interParticle.normCurrentPos.size();species++){
+			for(int interaction=0;interaction<(int)interParticle.normCurrentPos[species].size();interaction++){
+				interParticle.normCurrentPos[species][interaction]=twoSidedRandPull()*normBound;
+				interParticle.constCurrentPos[species][interaction]=randPull()*constBound;
+				
+			}
+		}
+		interParticle.normBestPos=interParticle.normCurrentPos;
+		interParticle.constBestPos=interParticle.constCurrentPos;
+		for(int species=0;species<(int)specNum.size();species++){
+			interParticle.decayConsts[species]=randPull()*decayBound;
+		}
+		interParticle.bestDecayConsts=interParticle.decayConsts;
+		particleSwarm.push_back(interParticle);
 	}
+	
+	//Define the search space of the particles
+	//Constrain the normalizations to be between -15 and 15
+	double inDelta(0);
+	for(int i=0;i<(int)ReactionObject1.reactConsts.size();i++){
+		inDelta+=pow(normBound,2);
+	}
+	//Constrain the hill constants to be relatively close to the experimental data. 
+	for(int i=0;i<(int)ReactionObject1.reactConsts.size();i++){
+		inDelta+=pow(constBound,2);
+	}
+	//Constrain the decay constants to be between infinite and 2 min^{-1}
+	for(int i=0;i<(int)specNum.size();i++){
+		inDelta+=pow(decayBound,2);
+	}
+	inDelta=sqrt(inDelta);
+	
+	FuzzyTree fuzzyStruct(inDelta);
 	
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &taskID);
@@ -103,9 +118,10 @@ int main(int argc, char* argv[]){
 	}
 	generator.seed(time(NULL)+taskID);
 	
-	
+	Particle myParticle=particleSwarm[taskID];
 	
 	vector<double> outDist(numOfRuns,0);
+	int lastReactionChange(0);
 
 	for(int i=0;i<numOfRuns;i++){
 		specNum=resetSpecNum;
@@ -114,20 +130,28 @@ int main(int argc, char* argv[]){
 		do{
 			int reactionIndex(0);
 			
-			for(int i=0;i<(int)hillDetails.size();i++){
-				for(int j=0;j<(int)hillDetails[i].size();j++){
-					ReactionObject1.reactConsts[reactionIndex]*=Hill(hillDetails[i][j].constant,hillDetails[i][j].power, specNum[hillDetails[i][j].speciesLabel],hillDetails[i][j].normalization);
+			for(int i=0;i<(int)myParticle.sampleSolution.size();i++){
+				for(int j=0;j<(int)myParticle.sampleSolution[i].size();j++){
+					if(myParticle.sampleSolutions[i][j].speciesLabel==lastReactionChange){
+						ReactionObject1.reactConsts[reactionIndex]=Hill(hillDetails[i][j].constant,hillDetails[i][j].power, specNum[hillDetails[i][j].speciesLabel],hillDetails[i][j].normalization);
+					}
 					reactionIndex++;
 				}
 			}
-			for(int i=0;i<(int)specNum.size();i++){
-				specNum[i]=currentParticle.decayConsts[i];
+				
+			for(int i=0;i<(int)myParticle.decayConsts.size();i++){
+				ReactionObject1.reactConsts[reactionIndex]=myParticle.decayConsts[i];
 			}
 			
 			
 			tuple<int,double> hold=ReactionObject1.PerformTimeStep2(specNum);
 			runTime+=get<1>(hold);
 			ReactionObject1.specChange(specNum,get<0>(hold),ReactionObject1.changeCoeffs);
+			for(int i=0;i<(int)ReactionObject1[get<0>(hold)].changeCoeffs.size();i++){
+				if(ReactionObject1[get<0>(hold)][i]!=0){
+					lastReactionChange=i;
+				}
+			}
 			if(runTime>120){
 				outDist[i]=specNum[10];
 			}
@@ -136,6 +160,8 @@ int main(int argc, char* argv[]){
 			//Distribution work goes here
 			
 	}
+	
+	
 	
 	double c1(2), c2(2);
 	particle* currentParticle=&particleSwarm[sol];
