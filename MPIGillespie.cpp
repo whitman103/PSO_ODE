@@ -66,6 +66,7 @@ int main(int argc, char* argv[]){
 	int nTasks(-1);
 	int numOfRuns(100);
 	double gamma(1./2000.);
+	vector<double> reportTimes={2,4,8,16,32,64};
 	
 	int numParticles(2);
 	vector<Particle> particleSwarm;
@@ -108,104 +109,158 @@ int main(int argc, char* argv[]){
 	
 	FuzzyTree fuzzyStruct(inDelta);
 	
+	double masterFitnessValue(0);
+	double fitnessValue(0);
+	double* fitnessContainer[30];
+	double* masterParams[100];
+	
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &taskID);
 	MPI_Comm_size(MPI_COMM_WORLD, &nTasks);
 	
-	if(nTasks!=numParticles){
+	if((nTasks-1)!=numParticles){
 		cout<<"Reset Particle Size"<<endl;
 		return 0;
 	}
 	generator.seed(time(NULL)+taskID);
 	
-	Particle myParticle=particleSwarm[taskID];
-	
-	vector<double> outDist(numOfRuns,0);
-	int lastReactionChange(0);
-
-	for(int i=0;i<numOfRuns;i++){
-		specNum=resetSpecNum;
-		double runTime(0);
+	if(taskID==0){
+		fitnessValue=1e13;
+		MPI_Barrier(MPI_COMM_WORLD);
 		
-		do{
+		
+	}
+	else{
+			
+		//first Time setup
+		
+		Particle myParticle=particleSwarm[taskID-1];
+		
+		vector<vector<vector<double> > > outDist(reportTimes, vector<vector<double> > (specNum.size(),vector<double> (numOfRuns,0)));
+		int lastReactionChange(0);
+
+		for(int run=0;i<numOfRuns;run++){
+			specNum=resetSpecNum;
+			double runTime(0);
+			
 			int reactionIndex(0);
 			
 			for(int i=0;i<(int)myParticle.sampleSolution.size();i++){
 				for(int j=0;j<(int)myParticle.sampleSolution[i].size();j++){
-					if(myParticle.sampleSolutions[i][j].speciesLabel==lastReactionChange){
-						ReactionObject1.reactConsts[reactionIndex]=Hill(hillDetails[i][j].constant,hillDetails[i][j].power, specNum[hillDetails[i][j].speciesLabel],hillDetails[i][j].normalization);
-					}
-					reactionIndex++;
+					ReactionObject1.reactConsts[reactionIndex]=Hill(myParticle.constCurrentPos[i][j],myParticle.sampleSolution[i][j].power, specNum[myParticle.sampleSolution[i][j].speciesLabel],myParticle.normCurrentPos[i][j]);
+						reactionIndex++;
 				}
 			}
-				
+			
 			for(int i=0;i<(int)myParticle.decayConsts.size();i++){
 				ReactionObject1.reactConsts[reactionIndex]=myParticle.decayConsts[i];
+				reactionIndex++;
 			}
 			
-			
-			tuple<int,double> hold=ReactionObject1.PerformTimeStep2(specNum);
-			runTime+=get<1>(hold);
-			ReactionObject1.specChange(specNum,get<0>(hold),ReactionObject1.changeCoeffs);
-			for(int i=0;i<(int)ReactionObject1[get<0>(hold)].changeCoeffs.size();i++){
-				if(ReactionObject1[get<0>(hold)][i]!=0){
-					lastReactionChange=i;
+			int reportIndex(0);
+			do{
+				reactionIndex=0;
+				
+				for(int i=0;i<(int)myParticle.sampleSolution.size();i++){
+					for(int j=0;j<(int)myParticle.sampleSolution[i].size();j++){
+						if(myParticle.sampleSolutions[i][j].speciesLabel==lastReactionChange&&runTime!=0){
+							ReactionObject1.reactConsts[reactionIndex]=Hill(myParticle.constCurrentPos[i][j],myParticle.sampleSolution[i][j].power, specNum[myParticle.sampleSolution[i][j].speciesLabel],myParticle.normCurrentPos[i][j]);
+						}
+						reactionIndex++;
+					}
+				}
+					
+				for(int i=0;i<(int)myParticle.decayConsts.size();i++){
+					ReactionObject1.reactConsts[reactionIndex]=myParticle.decayConsts[i];
+					reactionIndex++;
+				}
+				
+				
+				tuple<int,double> hold=ReactionObject1.PerformTimeStep2(specNum);
+				runTime+=get<1>(hold);
+				ReactionObject1.specChange(specNum,get<0>(hold),ReactionObject1.changeCoeffs);
+				for(int i=0;i<(int)ReactionObject1[get<0>(hold)].changeCoeffs.size();i++){
+					if(ReactionObject1[get<0>(hold)][i]!=0){
+						lastReactionChange=i;
+					}
+				}
+				if(runTime>reportTimes[reportIndex]){
+					for(int i=0;i<(int)specNum.size();i++){
+						outDist[reportIndex][i][run]=specNum[i];
+					}
+					reportIndex++;
+				}
+			}while(reportIndex<reportTimes.size());
+		}
+		
+		vector<vector<double> > testMeans(reportTimes.size(), vector<double> (numSpecies.size(),0));
+		for(int i=0;i<(int)reportTimes.size();i++){
+			for(int j=0;j<(int)numSpecies.size();j++){
+				testMeans[i][j]=returnMean(outDist[i][j]);
+			}
+		}
+		
+		double fitnessValue(0);
+		for(int i=0;i<(int)testMeans.size();i++){
+			for(int j=0;j<(int)testMeans[i].size();j++){
+				fitnessValue+=pow(testMeans[i][j]-experimentalMeans[i][j],2);
+			}
+		}
+		MPI_Barrier(MPI_COMM_WORLD);
+	}
+		
+		MPI_Gather(&fitnessValue, 1, MPI_DOUBLE, fitnessContainer, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+		
+		if(taskID==0){
+			int bestParticle(0);
+			for(int i=0;i<numParticles;i++){
+				if(fitnessContainer[i]<masterFitnessValue){
+					masterFitnessValue=fitnessContainer[i];
+					bestParticle=i;
 				}
 			}
-			if(runTime>120){
-				outDist[i]=specNum[10];
-			}
-		}while(runTime<150);
-			
-			//Distribution work goes here
-			
-	}
-	
-	
-	
-	double c1(2), c2(2);
-	particle* currentParticle=&particleSwarm[sol];
-	for(int i=0;i<(int)(*currentParticle).currentVelocity.size();i++){
-		for(int j=0;j<(int)(*currentParticle).currentVelocity[i].size();j++){
-			double rand1(randPull());
-			double rand2(randPull());
-			auto[currentNorm,currentConst]=(*currentParticle).currentPosition[i][j];
-			auto[curBestNorm,curBestConst]=(*currentParticle).bestPosition[i][j];
-			auto[groupBestNorm,groupBestConst]=particleSwarm[indexOfBestFit].currentPosition[i][j];
-			double proposedNormUpdate(c1*rand1*(curBestNorm-currentNorm)+c2*rand2*(groupBestNorm-currentNorm));
-			if(proposedNormUpdate+get<0>((*currentParticle).currentVelocity[i][j])>2){
-				get<0>((*currentParticle).currentVelocity[i][j])=2;
-			}
-			else{
-				get<0>((*currentParticle).currentVelocity[i][j])+=proposedNormUpdate;
-			}
-			if(proposedNormUpdate+get<0>((*currentParticle).currentVelocity[i][j])<-2){
-				get<0>((*currentParticle).currentVelocity[i][j])=-2;
-			}
-			double proposedConstUpdate=c1*rand1*(curBestConst-currentConst)+c2*rand2*(groupBestConst-currentConst);
-			if(proposedConstUpdate+get<1>((*currentParticle).currentVelocity[i][j])>2){
-				get<1>((*currentParticle).currentVelocity[i][j])=2;
-			}
-			else{
-				get<1>((*currentParticle).currentVelocity[i][j])+=proposedConstUpdate;
-			}
-			if(proposedConstUpdate+get<1>((*currentParticle).currentVelocity[i][j])<-2){
-				get<1>((*currentParticle).currentVelocity[i][j])=-2;
-			}
-			get<0>((*currentParticle).currentPosition[i][j])+=get<0>((*currentParticle).currentVelocity[i][j]);
-			get<1>((*currentParticle).currentPosition[i][j])+=get<1>((*currentParticle).currentVelocity[i][j]);
+			MPI_Gather(&
 		}
-	}
-	
-	for(int i=0;i<(int)specNum.size();i++){
-		double rand1(randPull());
-		double rand2(randPull());
+		MPI_Barrier(MPI_COMM_WORLD);
+		
+		//first update occurs with mean hyperparameters by fiat
+		
+		for(int i=0;i<(int)myParticle.sampleSolution.size();i++){
+			for(int j=0;j<(int)myParticle.sampleSolution[i].size();j++){
+				double rand1(randPull());
+				double rand2(randPull());
+				auto[currentNorm,currentConst]=(*currentParticle).currentPosition[i][j];
+				auto[curBestNorm,curBestConst]=(*currentParticle).bestPosition[i][j];
+				auto[groupBestNorm,groupBestConst]=particleSwarm[indexOfBestFit].currentPosition[i][j];
+				double proposedNormUpdate(c1*rand1*(curBestNorm-currentNorm)+c2*rand2*(groupBestNorm-currentNorm));
+				if(proposedNormUpdate+get<0>((*currentParticle).currentVelocity[i][j])>2){
+					get<0>((*currentParticle).currentVelocity[i][j])=2;
+				}
+				else{
+					get<0>((*currentParticle).currentVelocity[i][j])+=proposedNormUpdate;
+				}
+				if(proposedNormUpdate+get<0>((*currentParticle).currentVelocity[i][j])<-2){
+					get<0>((*currentParticle).currentVelocity[i][j])=-2;
+				}
+				double proposedConstUpdate=c1*rand1*(curBestConst-currentConst)+c2*rand2*(groupBestConst-currentConst);
+				if(proposedConstUpdate+get<1>((*currentParticle).currentVelocity[i][j])>2){
+					get<1>((*currentParticle).currentVelocity[i][j])=2;
+				}
+				else{
+					get<1>((*currentParticle).currentVelocity[i][j])+=proposedConstUpdate;
+				}
+				if(proposedConstUpdate+get<1>((*currentParticle).currentVelocity[i][j])<-2){
+					get<1>((*currentParticle).currentVelocity[i][j])=-2;
+				}
+				get<0>((*currentParticle).currentPosition[i][j])+=get<0>((*currentParticle).currentVelocity[i][j]);
+				get<1>((*currentParticle).currentPosition[i][j])+=get<1>((*currentParticle).currentVelocity[i][j]);
+			}
+		}
 		
 		
-		reactConsts[i]=currentParticle.decayConsts[i];
+		
+		MPI_Barrier(MPI_COMM_WORLD);
 	}
-	
-	MPI_Barrier(MPI_COMM_WORLD);
 	
 	MPI_Finalize();
 	
@@ -274,8 +329,9 @@ string convertHillStructToReactions(vector<vector<hillStruct> >& outStruct){
 double returnMean(vector<double> inList){
 	double outHold(0);
 	for(int i=0;i<(int)inList.size();i++){
-		outHold+=inList[i]/(double)inList.size();
+		outHold+=inList[i];
 	}
+	outHold/=(double)inList.size();
 	return outHold;
 }
 
