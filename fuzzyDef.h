@@ -71,8 +71,8 @@ class Particle{
 	vector<double> decayConsts;
 	vector<double> decayVelocities;
 	vector<double> bestDecayConsts;
-	double bestWellness;
-	double currentWellness;
+	double currentFitness;
+	double lastFitness;
 	tuple<double,double> constBounds;
 	tuple<double,double> normBounds;
 	double decayBound;

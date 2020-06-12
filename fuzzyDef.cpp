@@ -32,6 +32,12 @@ FuzzyTree::FuzzyTree(double inDelta){
 	delta1=0.2*deltaMax;
 	delta2=0.4*deltaMax;
 	delta3=0.6*deltaMax;
+	
+	inertia=interiaMap["Medium"];
+	social=socialMap["Medium"];
+	cognitive=cognitiveMap["Medium"];
+	L=LMap["Medium"];
+	U=UMap["Medium"];
 };
 
 

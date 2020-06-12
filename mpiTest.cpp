@@ -27,14 +27,35 @@
 	
 int main(int argc, char** argv){
 	generator.seed(time(NULL));
-	
-	
+	double toSend(0);
+	double receiveTest[5];
+	int taskId(0);
 	
 	MPI_Init(NULL,NULL);
 	int world_size;
 	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+	MPI_Comm_rank(MPI_COMM_WORLD, &taskId);
+	generator.seed(taskId*36);
 	
-	cout<<generator()<<endl;sssss
+	for(int i=0;i<world_size;i++){
+		toSend=(double)generator()/(double)generator.max();
+	}
+	MPI_Gather(&toSend, 1, MPI_DOUBLE, receiveTest,1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	
+	if(taskId==0){
+		for(int i=0;i<world_size;i++){
+			if(toSend<receiveTest[i]){
+				toSend=receiveTest[i];
+			}
+		}
+		cout<<" master value is: "<<toSend<<endl;
+	}
+	
+	MPI_Bcast(&toSend, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	
+	
+	cout<<"slave value is: "<<toSend<<endl;
+	
 	
 	MPI_Finalize();
 	

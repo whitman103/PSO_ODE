@@ -95,7 +95,7 @@ int main(int argc, char* argv[]){
 	//Constrain the normalizations to be between -15 and 15
 	double inDelta(0);
 	for(int i=0;i<(int)ReactionObject1.reactConsts.size();i++){
-		inDelta+=pow(normBound,2);
+		inDelta+=pow(2*normBound,2);
 	}
 	//Constrain the hill constants to be relatively close to the experimental data. 
 	for(int i=0;i<(int)ReactionObject1.reactConsts.size();i++){
@@ -107,160 +107,219 @@ int main(int argc, char* argv[]){
 	}
 	inDelta=sqrt(inDelta);
 	
-	FuzzyTree fuzzyStruct(inDelta);
 	
-	double masterFitnessValue(0);
+	
+	
+	double bestFitnessValue(0);
+	double fitnessContainer[numOfParticles];
 	double fitnessValue(0);
-	double* fitnessContainer[30];
-	double* masterParams[100];
+	int paramsPerReaction(2);
+	
+	int sizeOfParameterVector(paramsPerReaction*ReactionObject1.reactConsts.size()+specNum.size());
+	double parameterMatrixHold[(paramsPerReaction*ReactionObject1.reactConsts.size()+specNum.size())*(numParticles+1)];
+	double parameterVectorToSend[(paramsPerReaction*ReactionObject1.reactConsts.size()+specNum.size())];
 	
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &taskID);
 	MPI_Comm_size(MPI_COMM_WORLD, &nTasks);
+	FuzzyTree fuzzyStruct(inDelta);
 	
-	if((nTasks-1)!=numParticles){
+	if(nTasks!=numParticles){
 		cout<<"Reset Particle Size"<<endl;
 		return 0;
 	}
 	generator.seed(time(NULL)+taskID);
 	
-	if(taskID==0){
-		fitnessValue=1e13;
-		MPI_Barrier(MPI_COMM_WORLD);
-		
-		
-	}
-	else{
+	
+	
 			
-		//first Time setup
-		
-		Particle myParticle=particleSwarm[taskID-1];
-		
-		vector<vector<vector<double> > > outDist(reportTimes, vector<vector<double> > (specNum.size(),vector<double> (numOfRuns,0)));
-		int lastReactionChange(0);
+	//first Time setup
+	
+	Particle myParticle=particleSwarm[taskID];
+	
+	vector<vector<vector<double> > > outDist(reportTimes, vector<vector<double> > (specNum.size(),vector<double> (numOfRuns,0)));
+	int lastReactionChange(0);
 
-		for(int run=0;i<numOfRuns;run++){
-			specNum=resetSpecNum;
-			double runTime(0);
-			
-			int reactionIndex(0);
+	for(int run=0;i<numOfRuns;run++){
+		specNum=resetSpecNum;
+		double runTime(0);
+		
+		int reactionIndex(0);
+		
+		for(int i=0;i<(int)myParticle.sampleSolution.size();i++){
+			for(int j=0;j<(int)myParticle.sampleSolution[i].size();j++){
+				ReactionObject1.reactConsts[reactionIndex]=Hill(myParticle.constCurrentPos[i][j],myParticle.sampleSolution[i][j].power, specNum[myParticle.sampleSolution[i][j].speciesLabel],myParticle.normCurrentPos[i][j]);
+					reactionIndex++;
+			}
+		}
+		
+		for(int i=0;i<(int)myParticle.decayConsts.size();i++){
+			ReactionObject1.reactConsts[reactionIndex]=myParticle.decayConsts[i];
+			reactionIndex++;
+		}
+		
+		int reportIndex(0);
+		do{
+			reactionIndex=0;
 			
 			for(int i=0;i<(int)myParticle.sampleSolution.size();i++){
 				for(int j=0;j<(int)myParticle.sampleSolution[i].size();j++){
-					ReactionObject1.reactConsts[reactionIndex]=Hill(myParticle.constCurrentPos[i][j],myParticle.sampleSolution[i][j].power, specNum[myParticle.sampleSolution[i][j].speciesLabel],myParticle.normCurrentPos[i][j]);
-						reactionIndex++;
+					if(myParticle.sampleSolutions[i][j].speciesLabel==lastReactionChange&&runTime!=0){
+						ReactionObject1.reactConsts[reactionIndex]=Hill(myParticle.constCurrentPos[i][j],myParticle.sampleSolution[i][j].power, specNum[myParticle.sampleSolution[i][j].speciesLabel],myParticle.normCurrentPos[i][j]);
+					}
+					reactionIndex++;
 				}
 			}
-			
+				
 			for(int i=0;i<(int)myParticle.decayConsts.size();i++){
 				ReactionObject1.reactConsts[reactionIndex]=myParticle.decayConsts[i];
 				reactionIndex++;
 			}
 			
-			int reportIndex(0);
-			do{
-				reactionIndex=0;
-				
-				for(int i=0;i<(int)myParticle.sampleSolution.size();i++){
-					for(int j=0;j<(int)myParticle.sampleSolution[i].size();j++){
-						if(myParticle.sampleSolutions[i][j].speciesLabel==lastReactionChange&&runTime!=0){
-							ReactionObject1.reactConsts[reactionIndex]=Hill(myParticle.constCurrentPos[i][j],myParticle.sampleSolution[i][j].power, specNum[myParticle.sampleSolution[i][j].speciesLabel],myParticle.normCurrentPos[i][j]);
-						}
-						reactionIndex++;
-					}
+			
+			tuple<int,double> hold=ReactionObject1.PerformTimeStep2(specNum);
+			runTime+=get<1>(hold);
+			ReactionObject1.specChange(specNum,get<0>(hold),ReactionObject1.changeCoeffs);
+			for(int i=0;i<(int)ReactionObject1[get<0>(hold)].changeCoeffs.size();i++){
+				if(ReactionObject1[get<0>(hold)][i]!=0){
+					lastReactionChange=i;
 				}
-					
-				for(int i=0;i<(int)myParticle.decayConsts.size();i++){
-					ReactionObject1.reactConsts[reactionIndex]=myParticle.decayConsts[i];
-					reactionIndex++;
-				}
-				
-				
-				tuple<int,double> hold=ReactionObject1.PerformTimeStep2(specNum);
-				runTime+=get<1>(hold);
-				ReactionObject1.specChange(specNum,get<0>(hold),ReactionObject1.changeCoeffs);
-				for(int i=0;i<(int)ReactionObject1[get<0>(hold)].changeCoeffs.size();i++){
-					if(ReactionObject1[get<0>(hold)][i]!=0){
-						lastReactionChange=i;
-					}
-				}
-				if(runTime>reportTimes[reportIndex]){
-					for(int i=0;i<(int)specNum.size();i++){
-						outDist[reportIndex][i][run]=specNum[i];
-					}
-					reportIndex++;
-				}
-			}while(reportIndex<reportTimes.size());
-		}
-		
-		vector<vector<double> > testMeans(reportTimes.size(), vector<double> (numSpecies.size(),0));
-		for(int i=0;i<(int)reportTimes.size();i++){
-			for(int j=0;j<(int)numSpecies.size();j++){
-				testMeans[i][j]=returnMean(outDist[i][j]);
 			}
-		}
-		
-		double fitnessValue(0);
-		for(int i=0;i<(int)testMeans.size();i++){
-			for(int j=0;j<(int)testMeans[i].size();j++){
-				fitnessValue+=pow(testMeans[i][j]-experimentalMeans[i][j],2);
+			if(runTime>reportTimes[reportIndex]){
+				for(int i=0;i<(int)specNum.size();i++){
+					outDist[reportIndex][i][run]=specNum[i];
+				}
+				reportIndex++;
 			}
-		}
-		MPI_Barrier(MPI_COMM_WORLD);
+		}while(reportIndex<reportTimes.size());
 	}
-		
-		MPI_Gather(&fitnessValue, 1, MPI_DOUBLE, fitnessContainer, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-		
-		if(taskID==0){
-			int bestParticle(0);
-			for(int i=0;i<numParticles;i++){
-				if(fitnessContainer[i]<masterFitnessValue){
-					masterFitnessValue=fitnessContainer[i];
-					bestParticle=i;
-				}
-			}
-			MPI_Gather(&
+	
+	vector<vector<double> > testMeans(reportTimes.size(), vector<double> (numSpecies.size(),0));
+	for(int i=0;i<(int)reportTimes.size();i++){
+		for(int j=0;j<(int)numSpecies.size();j++){
+			testMeans[i][j]=returnMean(outDist[i][j]);
 		}
-		MPI_Barrier(MPI_COMM_WORLD);
-		
-		//first update occurs with mean hyperparameters by fiat
-		
-		for(int i=0;i<(int)myParticle.sampleSolution.size();i++){
-			for(int j=0;j<(int)myParticle.sampleSolution[i].size();j++){
-				double rand1(randPull());
-				double rand2(randPull());
-				auto[currentNorm,currentConst]=(*currentParticle).currentPosition[i][j];
-				auto[curBestNorm,curBestConst]=(*currentParticle).bestPosition[i][j];
-				auto[groupBestNorm,groupBestConst]=particleSwarm[indexOfBestFit].currentPosition[i][j];
-				double proposedNormUpdate(c1*rand1*(curBestNorm-currentNorm)+c2*rand2*(groupBestNorm-currentNorm));
-				if(proposedNormUpdate+get<0>((*currentParticle).currentVelocity[i][j])>2){
-					get<0>((*currentParticle).currentVelocity[i][j])=2;
+	}
+	
+	double fitnessValue(0);
+	for(int i=0;i<(int)testMeans.size();i++){
+		for(int j=0;j<(int)testMeans[i].size();j++){
+			fitnessValue+=pow(testMeans[i][j]-experimentalMeans[i][j],2);
+		}
+	}
+	
+	int fillingIndex(0);
+	for(int i=0;i<(int)myParticle.normCurrentPos.size();i++){
+		for(int j=0;j<(int)myParticle.normCurrentPos[i].size();j++){
+			parameterVectorToSend[fillingIndex]=myParticle.normCurrentPos[i][j];
+			fillingIndex++;
+		}
+	}
+	for(int i=0;i<(int)myParticle.constCurrentPos.size();i++){
+		for(int j=0;j<(int)myParticle.constCurrentPos[i].size();j++){
+			parameterVectorToSend[fillingIndex]=myParticle.constCurrentPos[i][j];
+			fillingIndex++;
+		}
+	}
+	for(int i=0;i<(int)myParticle.decayConsts.size();i++){
+		parameterVectorToSend[fillingIndex]=myParticle.decayConsts[i];
+		fillingIndex++;
+	}
+
+	
+	MPI_Gather(&fitnessValue, 1, MPI_DOUBLE, fitnessContainer, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Gather(parameterVectorToSend, sizeOfParameterVector, MPI_DOUBLE, parameterMatrixHold, sizeOfParameterVector, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	
+	if(taskID==0){
+		int bestParticle(0);
+		for(int i=0;i<numParticles;i++){
+			if(fitnessContainer[i]<masterFitnessValue){
+				bestFitnessValue=fitnessContainer[i];
+				bestParticle=i;
+			}
+		}
+		for(int i=0;i<sizeOfParameterVector;i++){
+			parameterVectorToSend[i]=parameterMatrixHold[bestParticle*sizeOfParameterVector+i];
+		}
+	}
+	MPI_Bcast(&bestFitnessValue, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Bcast(parameterVectorToSend, sizeOfParameterVector, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	
+
+	//first update occurs with mean hyperparameters by fiat
+	int fillingIndex(0);
+	fuzzyStruct.delta=0;
+	for(int i=0;i<(int)myParticle.normCurrentPos.size();i++){
+		for(int j=0;j<(int)myParticle.normCurrentPos[i].size();j++){
+			double rand1(randPull());
+			double rand2(randPull());
+			double proposedVelocity(0);
+			proposedVelocity+=fuzzyStruct.inertia*myParticle.normCurrentPos[i][j];
+			proposedVelocity+=fuzzyStruct.social*rand1*(myParticle.normCurrentPos[i][j]-parameterVectorToSend[fillingIndex]);
+			proposedVelocity+=fuzzyStruct.cognitive*rand2*(myParticle.normBestPos[i][j]);
+			fuzzyStruct.delta+=pow(proposedVelocity,2);
+			//Checks velocity limits
+			if(proposedUpdate<fuzzyStruct.U*(-2.*normBound)){
+				proposedUpdate=fuzzyStruct.U*(-2.*normBound);
+			}
+			if(proposedUpdate>fuzzyStruct.U*(2.*normBound)){
+				proposedUpdate=fuzzyStruct.U*(2.*normBound);
+			}
+			//Checks bounds of parameter space;
+			if(myParticle.normCurrentPos[i][j]+proposedUpdate<(-1.*normBound)){
+				myParticle.normCurrentPos[i][j]=-1.*normBound+(-1.*proposedUpdate);
+			}
+			else{
+				if(myParticle.normCurrentPos[i][j]+proposedUpdate>normBound){
+					myParticle.normCurrentPos[i][j]=normBound-proposedUpdate;
 				}
 				else{
-					get<0>((*currentParticle).currentVelocity[i][j])+=proposedNormUpdate;
+					myParticle.normCurrentPos[i][j]+=proposedUpdate;
 				}
-				if(proposedNormUpdate+get<0>((*currentParticle).currentVelocity[i][j])<-2){
-					get<0>((*currentParticle).currentVelocity[i][j])=-2;
-				}
-				double proposedConstUpdate=c1*rand1*(curBestConst-currentConst)+c2*rand2*(groupBestConst-currentConst);
-				if(proposedConstUpdate+get<1>((*currentParticle).currentVelocity[i][j])>2){
-					get<1>((*currentParticle).currentVelocity[i][j])=2;
+			}
+			fillingIndex++;
+		}
+	}
+	
+	
+	for(int i=0;i<(int)myParticle.constCurrentPos.size();i++){
+		for(int j=0;j<(int)myParticle.normCurrentPos[i].size();j++){
+			double rand1(randPull());
+			double rand2(randPull());
+			double proposedVelocity(0);
+			proposedVelocity+=fuzzyStruct.inertia*myParticle.constCurrentPos[i][j];
+			proposedVelocity+=fuzzyStruct.social*rand1*(myParticle.constCurrentPos[i][j]-parameterVectorToSend[fillingIndex]);
+			proposedVelocity+=fuzzyStruct.cognitive*rand2*(myParticle.normBestPos[i][j]);
+			fuzzyStruct.delta+=pow(proposedVelocity,2);
+			//Checks velocity limits
+			if(proposedUpdate<fuzzyStruct.U*(-1*.constBound){
+				proposedUpdate=fuzzyStruct.U*(constBound);
+			}
+			if(proposedUpdate>fuzzyStruct.U*(constBound){
+				proposedUpdate=fuzzyStruct.U*(constBound);
+			}
+			//Checks bounds of parameter space;
+			if(myParticle.constCurrentPos[i][j]+proposedUpdate<0){
+				myParticle.constCurrentPos[i][j]=(-1.*proposedUpdate);
+			}
+			else{
+				if(myParticle.constCurrentPos[i][j]+proposedUpdate>normBound){
+					myParticle.constCurrentPos[i][j]=normBound-proposedUpdate;
 				}
 				else{
-					get<1>((*currentParticle).currentVelocity[i][j])+=proposedConstUpdate;
+					myParticle.constCurrentPos[i][j]+=proposedUpdate;
 				}
-				if(proposedConstUpdate+get<1>((*currentParticle).currentVelocity[i][j])<-2){
-					get<1>((*currentParticle).currentVelocity[i][j])=-2;
-				}
-				get<0>((*currentParticle).currentPosition[i][j])+=get<0>((*currentParticle).currentVelocity[i][j]);
-				get<1>((*currentParticle).currentPosition[i][j])+=get<1>((*currentParticle).currentVelocity[i][j]);
 			}
+			fillingIndex++;
 		}
-		
-		
-		
-		MPI_Barrier(MPI_COMM_WORLD);
 	}
+	
+	
+	
+	
+	
+	MPI_Barrier(MPI_COMM_WORLD);
+
 	
 	MPI_Finalize();
 	
