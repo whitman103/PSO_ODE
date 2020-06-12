@@ -47,11 +47,13 @@ BASE=  MPIGillespie
 SRCS= \
 MPIGillespie.cpp\
 GillespieFunctions.cpp\
+fuzzyDef.cpp\
 
 
 # Put all header files here.  NO SPACES after continuation \'s.
 HDRS= \
 GillespieFunctions.h\
+fuzzyDef.h
 
 
 # Put any input files you want to be saved in tarballs (e.g., sample files).

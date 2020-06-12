@@ -111,7 +111,7 @@ int main(int argc, char* argv[]){
 	
 	
 	double bestFitnessValue(0);
-	double fitnessContainer[numOfParticles];
+	double fitnessContainer[numParticles];
 	double fitnessValue(0);
 	int paramsPerReaction(2);
 	
@@ -137,10 +137,10 @@ int main(int argc, char* argv[]){
 	
 	Particle myParticle=particleSwarm[taskID];
 	
-	vector<vector<vector<double> > > outDist(reportTimes, vector<vector<double> > (specNum.size(),vector<double> (numOfRuns,0)));
+	vector<vector<vector<double> > > outDist(reportTimes.size(), vector<vector<double> > (specNum.size(),vector<double> (numOfRuns,0)));
 	int lastReactionChange(0);
 
-	for(int run=0;i<numOfRuns;run++){
+	for(int run=0;run<numOfRuns;run++){
 		specNum=resetSpecNum;
 		double runTime(0);
 		
@@ -164,7 +164,7 @@ int main(int argc, char* argv[]){
 			
 			for(int i=0;i<(int)myParticle.sampleSolution.size();i++){
 				for(int j=0;j<(int)myParticle.sampleSolution[i].size();j++){
-					if(myParticle.sampleSolutions[i][j].speciesLabel==lastReactionChange&&runTime!=0){
+					if(myParticle.sampleSolution[i][j].speciesLabel==lastReactionChange&&runTime!=0){
 						ReactionObject1.reactConsts[reactionIndex]=Hill(myParticle.constCurrentPos[i][j],myParticle.sampleSolution[i][j].power, specNum[myParticle.sampleSolution[i][j].speciesLabel],myParticle.normCurrentPos[i][j]);
 					}
 					reactionIndex++;
@@ -180,8 +180,8 @@ int main(int argc, char* argv[]){
 			tuple<int,double> hold=ReactionObject1.PerformTimeStep2(specNum);
 			runTime+=get<1>(hold);
 			ReactionObject1.specChange(specNum,get<0>(hold),ReactionObject1.changeCoeffs);
-			for(int i=0;i<(int)ReactionObject1[get<0>(hold)].changeCoeffs.size();i++){
-				if(ReactionObject1[get<0>(hold)][i]!=0){
+			for(int i=0;i<(int)ReactionObject1.changeCoeffs[get<0>(hold)].size();i++){
+				if(ReactionObject1.changeCoeffs[get<0>(hold)][i]!=0){
 					lastReactionChange=i;
 				}
 			}
@@ -191,17 +191,17 @@ int main(int argc, char* argv[]){
 				}
 				reportIndex++;
 			}
-		}while(reportIndex<reportTimes.size());
+		}while(reportIndex<(int)reportTimes.size());
 	}
 	
-	vector<vector<double> > testMeans(reportTimes.size(), vector<double> (numSpecies.size(),0));
+	vector<vector<double> > testMeans(reportTimes.size(), vector<double> (specNum.size(),0));
 	for(int i=0;i<(int)reportTimes.size();i++){
-		for(int j=0;j<(int)numSpecies.size();j++){
+		for(int j=0;j<(int)specNum.size();j++){
 			testMeans[i][j]=returnMean(outDist[i][j]);
 		}
 	}
 	
-	double fitnessValue(0);
+	fitnessValue=0;
 	for(int i=0;i<(int)testMeans.size();i++){
 		for(int j=0;j<(int)testMeans[i].size();j++){
 			fitnessValue+=pow(testMeans[i][j]-experimentalMeans[i][j],2);
@@ -233,7 +233,7 @@ int main(int argc, char* argv[]){
 	if(taskID==0){
 		int bestParticle(0);
 		for(int i=0;i<numParticles;i++){
-			if(fitnessContainer[i]<masterFitnessValue){
+			if(fitnessContainer[i]<bestFitnessValue){
 				bestFitnessValue=fitnessContainer[i];
 				bestParticle=i;
 			}
@@ -247,7 +247,7 @@ int main(int argc, char* argv[]){
 	
 
 	//first update occurs with mean hyperparameters by fiat
-	int fillingIndex(0);
+	fillingIndex=0;
 	fuzzyStruct.delta=0;
 	for(int i=0;i<(int)myParticle.normCurrentPos.size();i++){
 		for(int j=0;j<(int)myParticle.normCurrentPos[i].size();j++){
@@ -256,25 +256,25 @@ int main(int argc, char* argv[]){
 			double proposedVelocity(0);
 			proposedVelocity+=fuzzyStruct.inertia*myParticle.normCurrentPos[i][j];
 			proposedVelocity+=fuzzyStruct.social*rand1*(myParticle.normCurrentPos[i][j]-parameterVectorToSend[fillingIndex]);
-			proposedVelocity+=fuzzyStruct.cognitive*rand2*(myParticle.normBestPos[i][j]);
+			proposedVelocity+=fuzzyStruct.cognitive*rand2*(myParticle.normBestPos[i][j]-myParticle.normCurrentPos[i][j]);
 			fuzzyStruct.delta+=pow(proposedVelocity,2);
 			//Checks velocity limits
-			if(proposedUpdate<fuzzyStruct.U*(-2.*normBound)){
-				proposedUpdate=fuzzyStruct.U*(-2.*normBound);
+			if(proposedVelocity<fuzzyStruct.U*(-2.*normBound)){
+				proposedVelocity=fuzzyStruct.U*(-2.*normBound);
 			}
-			if(proposedUpdate>fuzzyStruct.U*(2.*normBound)){
-				proposedUpdate=fuzzyStruct.U*(2.*normBound);
+			if(proposedVelocity>fuzzyStruct.U*(2.*normBound)){
+				proposedVelocity=fuzzyStruct.U*(2.*normBound);
 			}
 			//Checks bounds of parameter space;
-			if(myParticle.normCurrentPos[i][j]+proposedUpdate<(-1.*normBound)){
-				myParticle.normCurrentPos[i][j]=-1.*normBound+(-1.*proposedUpdate);
+			if(myParticle.normCurrentPos[i][j]+proposedVelocity<(-1.*normBound)){
+				myParticle.normCurrentPos[i][j]=-1.*normBound+(-1.*proposedVelocity);
 			}
 			else{
-				if(myParticle.normCurrentPos[i][j]+proposedUpdate>normBound){
-					myParticle.normCurrentPos[i][j]=normBound-proposedUpdate;
+				if(myParticle.normCurrentPos[i][j]+proposedVelocity>normBound){
+					myParticle.normCurrentPos[i][j]=normBound-proposedVelocity;
 				}
 				else{
-					myParticle.normCurrentPos[i][j]+=proposedUpdate;
+					myParticle.normCurrentPos[i][j]+=proposedVelocity;
 				}
 			}
 			fillingIndex++;
@@ -289,29 +289,59 @@ int main(int argc, char* argv[]){
 			double proposedVelocity(0);
 			proposedVelocity+=fuzzyStruct.inertia*myParticle.constCurrentPos[i][j];
 			proposedVelocity+=fuzzyStruct.social*rand1*(myParticle.constCurrentPos[i][j]-parameterVectorToSend[fillingIndex]);
-			proposedVelocity+=fuzzyStruct.cognitive*rand2*(myParticle.normBestPos[i][j]);
+			proposedVelocity+=fuzzyStruct.cognitive*rand2*(myParticle.constBestPos[i][j]-myParticle.constCurrentPos[i][j]);
 			fuzzyStruct.delta+=pow(proposedVelocity,2);
 			//Checks velocity limits
-			if(proposedUpdate<fuzzyStruct.U*(-1*.constBound){
-				proposedUpdate=fuzzyStruct.U*(constBound);
+			if(proposedVelocity<fuzzyStruct.U*(-1.*constBound)){
+				proposedVelocity=fuzzyStruct.U*(constBound);
 			}
-			if(proposedUpdate>fuzzyStruct.U*(constBound){
-				proposedUpdate=fuzzyStruct.U*(constBound);
+			if(proposedVelocity>fuzzyStruct.U*(constBound)){
+				proposedVelocity=fuzzyStruct.U*(constBound);
 			}
 			//Checks bounds of parameter space;
-			if(myParticle.constCurrentPos[i][j]+proposedUpdate<0){
-				myParticle.constCurrentPos[i][j]=(-1.*proposedUpdate);
+			if(myParticle.constCurrentPos[i][j]+proposedVelocity<0){
+				myParticle.constCurrentPos[i][j]=(-1.*proposedVelocity);
 			}
 			else{
-				if(myParticle.constCurrentPos[i][j]+proposedUpdate>normBound){
-					myParticle.constCurrentPos[i][j]=normBound-proposedUpdate;
+				if(myParticle.constCurrentPos[i][j]+proposedVelocity>normBound){
+					myParticle.constCurrentPos[i][j]=normBound-proposedVelocity;
 				}
 				else{
-					myParticle.constCurrentPos[i][j]+=proposedUpdate;
+					myParticle.constCurrentPos[i][j]+=proposedVelocity;
 				}
 			}
 			fillingIndex++;
 		}
+	}
+	
+	for(int i=0;i<(int)myParticle.decayConsts.size();i++){
+		double rand1(randPull());
+		double rand2(randPull());
+		double proposedVelocity(0);
+		proposedVelocity+=fuzzyStruct.inertia*myParticle.decayConsts[i];
+		proposedVelocity+=fuzzyStruct.social*rand1*(parameterVectorToSend[fillingIndex]-myParticle.decayConsts[i]);
+		proposedVelocity+=fuzzyStruct.cognitive*rand2*(myParticle.bestDecayConsts[i]-myParticle.decayConsts[i]);
+		fuzzyStruct.delta+=pow(proposedVelocity,2);
+		//Checks velocity limits
+		if(proposedVelocity<fuzzyStruct.U*(-1.*decayBound)){
+			proposedVelocity=fuzzyStruct.U*(decayBound);
+		}
+		if(proposedVelocity>fuzzyStruct.U*(decayBound)){
+			proposedVelocity=fuzzyStruct.U*(decayBound);
+		}
+		//Checks bounds of parameter space;
+		if(myParticle.decayConsts[i]+proposedVelocity<0){
+			myParticle.decayConsts[i]=(-1.*proposedVelocity);
+		}
+		else{
+			if(myParticle.decayConsts[i]+proposedVelocity>normBound){
+				myParticle.decayConsts[i]=normBound-proposedVelocity;
+			}
+			else{
+				myParticle.decayConsts[i]+=proposedVelocity;
+			}
+		}
+		fillingIndex++;
 	}
 	
 	
