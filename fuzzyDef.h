@@ -13,7 +13,7 @@ class FuzzyTree{
 	FuzzyTree(double inDelta);
 	~FuzzyTree();
 	
-	double phi;
+	double phi, phiNormalization;
 	double delta, delta1, delta2, delta3, deltaMax;
 	//phi Membership values are set as better, same, worse
 	vector<double> phiMembershipValues;
@@ -42,6 +42,8 @@ class FuzzyTree{
 	void setU();
 	void calculatePhiMembershipValues();
 	void calculateDeltaMembershipValues();
+	
+	void calculatePhi(double lastFitness, double currentFitness);
 	
 	
 	
@@ -73,9 +75,11 @@ class Particle{
 	vector<double> bestDecayConsts;
 	double currentFitness;
 	double lastFitness;
+	double bestFitness;
 	tuple<double,double> constBounds;
 	tuple<double,double> normBounds;
 	double decayBound;
+	void dumpParticleDetails(string id);
 	private:
 };
 

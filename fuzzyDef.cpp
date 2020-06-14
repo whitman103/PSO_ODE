@@ -3,6 +3,8 @@
 #include <string>
 #include <math.h>
 #include <vector>
+#include <fstream>
+#include <algorithm>
 
 
 #include "fuzzyDef.h"
@@ -33,7 +35,7 @@ FuzzyTree::FuzzyTree(double inDelta){
 	delta2=0.4*deltaMax;
 	delta3=0.6*deltaMax;
 	
-	inertia=interiaMap["Medium"];
+	inertia=inertiaMap["Medium"];
 	social=socialMap["Medium"];
 	cognitive=cognitiveMap["Medium"];
 	L=LMap["Medium"];
@@ -126,6 +128,12 @@ void FuzzyTree::setU(){
 	U/=2.;
 }
 
+void FuzzyTree::calculatePhi(double lastFitness, double currentFitness){
+	phi=0;
+	phi=delta/deltaMax;
+	phi*=(min(currentFitness,phiNormalization)-min(lastFitness,phiNormalization))/phiNormalization;
+}
+
 Particle::Particle(vector<vector<hillStruct> > inSolution, tuple<double,double,double> bounds){
 	sampleSolution=inSolution;
 	int numSpecies=sampleSolution.size();
@@ -138,13 +146,13 @@ Particle::Particle(vector<vector<hillStruct> > inSolution, tuple<double,double,d
 	decayConsts.resize(numSpecies);
 	decayVelocities.resize(numSpecies);
 	bestDecayConsts.resize(numSpecies);
-	bestWellness=0;
-	currentWellness=0;
+	bestFitness=0;
+	currentFitness=0;
 	constBounds=make_tuple(-1.*get<0>(bounds),get<0>(bounds));
 	normBounds=make_tuple(-1.*get<1>(bounds),get<1>(bounds));
 	decayBound=get<2>(bounds);
 	for(int i=0;i<(int)inSolution.size();i++){
-		int numInteractions=inSolutions[i].size();
+		int numInteractions=inSolution[i].size();
 		normCurrentPos[i].resize(numInteractions);
 		normBestPos[i].resize(numInteractions);
 		normVelocity[i].resize(numInteractions);
@@ -152,4 +160,30 @@ Particle::Particle(vector<vector<hillStruct> > inSolution, tuple<double,double,d
 		constBestPos[i].resize(numInteractions);
 		constVelocity[i].resize(numInteractions);
 	}
+}
+
+Particle::~Particle(){
+	
+	
+	
+}
+
+void Particle::dumpParticleDetails(string id){
+	ofstream outParticle("particleDump_"+id+".txt");
+	outParticle<<normBestPos.size()<<endl;
+	int reactionCount(0);
+	for(int i=0;i<(int)normBestPos.size();i++){
+		for(int j=0;j<(int)normBestPos[i].size();j++){
+			reactionCount++;
+		}
+	}
+	outParticle<<reactionCount<<endl;
+	
+	for(int i=0;i<(int)sampleSolution.size();i++){
+		for(int j=0;j<(int)sampleSolution[i].size();j++){
+			outParticle<<i<<" ";
+		}
+	}
+	
+	
 }
