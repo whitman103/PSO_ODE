@@ -615,8 +615,8 @@ void loadHillStructDetails(vector<vector<hillStruct> >& inStructure, string inFi
 			hillStruct interStruct;
 			interStruct.power=coefficient;
 			interStruct.speciesLabel=index1;
-			structureVector[j]=interStruct;
 			interStruct.hillBool=randPull()>0.25;
+			structureVector[j]=interStruct;
 		}
 		inStructure.push_back(structureVector);
 	}
