@@ -1,4 +1,5 @@
 #include <map>
+#include <iostream>
 #include <tuple>
 #include <string>
 #include <math.h>
@@ -78,7 +79,6 @@ void FuzzyTree::calculateDeltaMembershipValues(){
 	}
 }
 
-
 void FuzzyTree::calculatePhiMembershipValues(){
 	if(phi<0){
 		phiMembershipValues={-phi,1-fabs(phi),0};
@@ -148,8 +148,8 @@ Particle::Particle(vector<vector<hillStruct> > inSolution, tuple<double,double,d
 	bestDecayConsts.resize(numSpecies);
 	bestFitness=0;
 	currentFitness=0;
-	constBounds=make_tuple(-1.*get<0>(bounds),get<0>(bounds));
-	normBounds=make_tuple(-1.*get<1>(bounds),get<1>(bounds));
+	constBound=get<0>(bounds);
+	normBound=get<1>(bounds);
 	decayBound=get<2>(bounds);
 	for(int i=0;i<(int)inSolution.size();i++){
 		int numInteractions=inSolution[i].size();
@@ -170,7 +170,8 @@ Particle::~Particle(){
 
 void Particle::dumpParticleDetails(string id){
 	ofstream outParticle("particleDump_"+id+".txt");
-	outParticle<<normBestPos.size()<<endl;
+	outParticle<<"#m N: species Power Constant Norm Pos/Neg"<<endl;
+	outParticle<<normBestPos.size()<<" ";
 	int reactionCount(0);
 	for(int i=0;i<(int)normBestPos.size();i++){
 		for(int j=0;j<(int)normBestPos[i].size();j++){
@@ -180,10 +181,128 @@ void Particle::dumpParticleDetails(string id){
 	outParticle<<reactionCount<<endl;
 	
 	for(int i=0;i<(int)sampleSolution.size();i++){
+		outParticle<<i<<" "<<sampleSolution[i].size()<<" ";
 		for(int j=0;j<(int)sampleSolution[i].size();j++){
-			outParticle<<i<<" ";
+			outParticle<<sampleSolution[i][j].speciesLabel<<" "<<sampleSolution[i][j].power<<" "<<sampleSolution[i][j].constant<<" "<<sampleSolution[i][j].normalization<<" "<<sampleSolution[i][j].hillBool<<" ";
+		}
+		outParticle<<endl;
+	}
+	
+	for(int i=0;i<(int)decayConsts.size();i++){
+		outParticle<<decayConsts[i]<<endl;
+	}
+	outParticle.close();
+}
+
+
+
+double Particle::performUpdate(boost::mt19937* inRand, FuzzyTree* fuzzyStruct, double parameterVectorToSend[]){
+	double interDelta(0);
+	
+	int fillingIndex(0);
+	for(int i=0;i<(int)normCurrentPos.size();i++){
+		for(int j=0;j<(int)normCurrentPos[i].size();j++){
+			double rand1((double)(*inRand)()/(double)(*inRand).max());
+			double rand2((double)(*inRand)()/(double)(*inRand).max());
+			double proposedVelocity(0);
+			proposedVelocity+=(*fuzzyStruct).inertia*normVelocity[i][j];
+			proposedVelocity+=(*fuzzyStruct).social*rand1*(parameterVectorToSend[fillingIndex]-normCurrentPos[i][j]);
+			proposedVelocity+=(*fuzzyStruct).cognitive*rand2*(normBestPos[i][j]-normCurrentPos[i][j]);
+			interDelta+=pow(proposedVelocity/normBound,2);
+			//Checks velocity limits
+			if(proposedVelocity<(*fuzzyStruct).U*(-1.*normBound)){
+				proposedVelocity=(*fuzzyStruct).U*(-1.*normBound);
+			}
+			if(proposedVelocity>(*fuzzyStruct).U*(normBound)){
+				proposedVelocity=(*fuzzyStruct).U*(normBound);
+			}
+			//Checks bounds of parameter space;
+			if(normCurrentPos[i][j]+proposedVelocity<0){
+				normCurrentPos[i][j]=(-1.*proposedVelocity);
+				normVelocity[i][j]=(-1.*proposedVelocity)*.25;
+			}
+			else{
+				if(normCurrentPos[i][j]+proposedVelocity>normBound){
+					normCurrentPos[i][j]=normBound-proposedVelocity;
+					normVelocity[i][j]=(-1.*proposedVelocity)*.25;
+				}
+				else{
+					normCurrentPos[i][j]+=proposedVelocity;
+					normVelocity[i][j]=proposedVelocity;
+				}
+			}
+			fillingIndex++;
 		}
 	}
 	
 	
+	for(int i=0;i<(int)constCurrentPos.size();i++){
+		for(int j=0;j<(int)constCurrentPos[i].size();j++){
+			double rand1((double)(*inRand)()/(double)(*inRand).max());
+			double rand2((double)(*inRand)()/(double)(*inRand).max());
+			double proposedVelocity(0);
+			proposedVelocity+=(*fuzzyStruct).inertia*constVelocity[i][j];
+			proposedVelocity+=(*fuzzyStruct).social*rand1*(parameterVectorToSend[fillingIndex]-constCurrentPos[i][j]);
+			proposedVelocity+=(*fuzzyStruct).cognitive*rand2*(constBestPos[i][j]-constCurrentPos[i][j]);
+			interDelta+=pow(proposedVelocity/constBound,2);
+			//Checks velocity limits
+			if(proposedVelocity<(*fuzzyStruct).U*(-1.*constBound)){
+				proposedVelocity=(*fuzzyStruct).U*(constBound);
+			}
+			if(proposedVelocity>(*fuzzyStruct).U*(constBound)){
+				proposedVelocity=(*fuzzyStruct).U*(constBound);
+			}
+			//Checks bounds of parameter space;
+			if(constCurrentPos[i][j]+proposedVelocity<0){
+				constCurrentPos[i][j]=(-1.*proposedVelocity);
+				constVelocity[i][j]=(-1.*proposedVelocity)*.25;
+			}
+			else{
+				if(constCurrentPos[i][j]+proposedVelocity>constBound){
+					constCurrentPos[i][j]=constBound-proposedVelocity;
+					constVelocity[i][j]=(-1.*proposedVelocity)*.25;
+				}
+				else{
+					constCurrentPos[i][j]+=proposedVelocity;
+					constVelocity[i][j]=proposedVelocity;
+				}
+			}
+			fillingIndex++;
+		}
+	}
+	
+	for(int i=0;i<(int)decayConsts.size();i++){
+		double rand1((double)(*inRand)()/(double)(*inRand).max());
+		double rand2((double)(*inRand)()/(double)(*inRand).max());
+		double proposedVelocity(0);
+		proposedVelocity+=(*fuzzyStruct).inertia*decayVelocities[i];
+		proposedVelocity+=(*fuzzyStruct).social*rand1*(parameterVectorToSend[fillingIndex]-decayConsts[i]);
+		proposedVelocity+=(*fuzzyStruct).cognitive*rand2*(bestDecayConsts[i]-decayConsts[i]);
+		interDelta+=pow(proposedVelocity/decayBound,2);
+		//Checks velocity limits
+		if(proposedVelocity<(*fuzzyStruct).U*(-1.*decayBound)){
+			proposedVelocity=(*fuzzyStruct).U*(decayBound);
+		}
+		if(proposedVelocity>(*fuzzyStruct).U*(decayBound)){
+			proposedVelocity=(*fuzzyStruct).U*(decayBound);
+		}
+		//Checks bounds of parameter space;
+		if(decayConsts[i]+proposedVelocity<0){
+			decayConsts[i]+=(-1.*proposedVelocity);
+			decayVelocities[i]=(-1.*proposedVelocity)*.25;
+		}
+		else{
+			if(decayConsts[i]+proposedVelocity>normBound){
+				decayConsts[i]=normBound-proposedVelocity;
+				decayVelocities[i]=(-1.*proposedVelocity)*.25;
+			}
+			else{
+				decayConsts[i]+=proposedVelocity;
+				decayVelocities[i]=proposedVelocity;
+			}
+		}
+		fillingIndex++;
+	}
+	
+	return interDelta;
 }

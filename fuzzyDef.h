@@ -5,6 +5,8 @@
 #include <tuple>
 #include <string>
 #include <vector>
+#include <boost/random/mersenne_twister.hpp>
+using boost::mt19937;
 
 using namespace std;
 
@@ -76,10 +78,11 @@ class Particle{
 	double currentFitness;
 	double lastFitness;
 	double bestFitness;
-	tuple<double,double> constBounds;
-	tuple<double,double> normBounds;
+	double constBound;
+	double normBound;
 	double decayBound;
 	void dumpParticleDetails(string id);
+	double performUpdate(boost::mt19937* inRand, FuzzyTree* fuzzyStruct, double parameterVectorToSend[]);
 	private:
 };
 
