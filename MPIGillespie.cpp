@@ -147,7 +147,7 @@ int main(int argc, char* argv[]){
 	
 
 	
-	int numParticles(3);
+	int numParticles(15);
 	vector<Particle> particleSwarm;
 	
 	int numInteractionConsts(0);
