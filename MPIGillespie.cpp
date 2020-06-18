@@ -51,6 +51,7 @@ int main(int argc, char* argv[]){
 	loadHillStructDetails(hillDetails, baseHillStructure);
 	
 	string structureLabel=convertHillStructToReactions(hillDetails);
+	ofstream fitnessValuesOut("fitnessMasterOut.txt");
 	
 	Gillespie ReactionObject1(structureLabel+"Coeffs");
 	generator.seed(time(NULL));
@@ -450,15 +451,14 @@ int main(int argc, char* argv[]){
 			double worstFitness(0);
 			bool setNewGlobalBest(false);
 			for(int i=0;i<numParticles;i++){
+				fitnessValuesOut<<fitnessContainer[i]<<" ";
 				if(fitnessContainer[i]<bestFitnessValue){
 					bestFitnessValue=fitnessContainer[i];
 					setNewGlobalBest=true;
 					bestParticle=i;
 				}
-				if(fitnessContainer[i]>worstFitness){
-					worstFitness=fitnessContainer[i];
-				}
 			}
+			fitnessValuesOut<<endl;
 			if(setNewGlobalBest){
 				for(int i=0;i<sizeOfParameterVector;i++){
 					globalBestParameterSet[i]=parameterMatrixHold[bestParticle*sizeOfParameterVector+i];
@@ -512,7 +512,7 @@ int main(int argc, char* argv[]){
 	
 	MPI_Finalize();
 	
-
+	fitnessValuesOut.close();
 	
 	
 	return 0;
