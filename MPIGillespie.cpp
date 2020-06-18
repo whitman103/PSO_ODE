@@ -354,7 +354,7 @@ int main(int argc, char* argv[]){
 	
 	
 	// Iterate the solutions for PSO
-	int numIterations(25);
+	int numIterations(100);
 	for(int iteration=0;iteration<numIterations;iteration++){
 		//Generate distributions
 		for(int run=0;run<numOfRuns;run++){
