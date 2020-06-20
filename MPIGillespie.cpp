@@ -448,7 +448,6 @@ int main(int argc, char* argv[]){
 		MPI_Gather(parameterVectorToSend, sizeOfParameterVector, MPI_DOUBLE, parameterMatrixHold, sizeOfParameterVector, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 		int bestParticle(0);
 		if(taskID==0){
-			double worstFitness(0);
 			bool setNewGlobalBest(false);
 			for(int i=0;i<numParticles;i++){
 				fitnessValuesOut<<fitnessContainer[i]<<" ";
@@ -459,6 +458,9 @@ int main(int argc, char* argv[]){
 				}
 			}
 			fitnessValuesOut<<endl;
+			if(fitnessContainer[i]>fitnessNormalization){
+				fitnessNormalization=fitnessContainer[i];
+			}
 			if(setNewGlobalBest){
 				for(int i=0;i<sizeOfParameterVector;i++){
 					globalBestParameterSet[i]=parameterMatrixHold[bestParticle*sizeOfParameterVector+i];
