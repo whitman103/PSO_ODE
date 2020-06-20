@@ -208,7 +208,7 @@ double Particle::performUpdate(boost::mt19937* inRand, FuzzyTree* fuzzyStruct, d
 			proposedVelocity+=(*fuzzyStruct).inertia*normVelocity[i][j];
 			proposedVelocity+=(*fuzzyStruct).social*rand1*(parameterVectorToSend[fillingIndex]-normCurrentPos[i][j]);
 			proposedVelocity+=(*fuzzyStruct).cognitive*rand2*(normBestPos[i][j]-normCurrentPos[i][j]);
-			interDelta+=pow(proposedVelocity/normBound,2);
+			interDelta+=pow((parameterVectorToSend[fillingIndex]-normCurrentPos[i][j])/normBound,2);
 			//Checks velocity limits
 			if(proposedVelocity<(*fuzzyStruct).U*(-1.*normBound)){
 				proposedVelocity=(*fuzzyStruct).U*(-1.*normBound);
@@ -244,7 +244,7 @@ double Particle::performUpdate(boost::mt19937* inRand, FuzzyTree* fuzzyStruct, d
 			proposedVelocity+=(*fuzzyStruct).inertia*constVelocity[i][j];
 			proposedVelocity+=(*fuzzyStruct).social*rand1*(parameterVectorToSend[fillingIndex]-constCurrentPos[i][j]);
 			proposedVelocity+=(*fuzzyStruct).cognitive*rand2*(constBestPos[i][j]-constCurrentPos[i][j]);
-			interDelta+=pow(proposedVelocity/constBound,2);
+			interDelta+=pow((parameterVectorToSend[fillingIndex]-constCurrentPos[i][j])/constBound,2);
 			//Checks velocity limits
 			if(proposedVelocity<(*fuzzyStruct).U*(-1.*constBound)){
 				proposedVelocity=(*fuzzyStruct).U*(constBound);
@@ -278,7 +278,7 @@ double Particle::performUpdate(boost::mt19937* inRand, FuzzyTree* fuzzyStruct, d
 		proposedVelocity+=(*fuzzyStruct).inertia*decayVelocities[i];
 		proposedVelocity+=(*fuzzyStruct).social*rand1*(parameterVectorToSend[fillingIndex]-decayConsts[i]);
 		proposedVelocity+=(*fuzzyStruct).cognitive*rand2*(bestDecayConsts[i]-decayConsts[i]);
-		interDelta+=pow(proposedVelocity/decayBound,2);
+		interDelta+=pow((parameterVectorToSend[fillingIndex]-decayConsts[i])/decayBound,2);
 		//Checks velocity limits
 		if(proposedVelocity<(*fuzzyStruct).U*(-1.*decayBound)){
 			proposedVelocity=(*fuzzyStruct).U*(decayBound);
