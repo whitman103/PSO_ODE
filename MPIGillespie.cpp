@@ -456,11 +456,12 @@ int main(int argc, char* argv[]){
 					setNewGlobalBest=true;
 					bestParticle=i;
 				}
+				if(fitnessContainer[i]>fitnessNormalization){
+					fitnessNormalization=fitnessContainer[i];
+				}
 			}
 			fitnessValuesOut<<endl;
-			if(fitnessContainer[i]>fitnessNormalization){
-				fitnessNormalization=fitnessContainer[i];
-			}
+			
 			if(setNewGlobalBest){
 				for(int i=0;i<sizeOfParameterVector;i++){
 					globalBestParameterSet[i]=parameterMatrixHold[bestParticle*sizeOfParameterVector+i];
