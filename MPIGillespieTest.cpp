@@ -11,6 +11,7 @@
 #include <filesystem>
 #include "GillespieFunctions.h"
 #include "fuzzyDef.h"
+#include <sys/types.h>
 #include <mpi.h>
 using namespace std;
 #include <boost/random/mersenne_twister.hpp>
@@ -52,7 +53,7 @@ int main(int argc, char* argv[]){
 	int numOfSets(5);
 	
 	string masterFolder="MasterFolder";
-	filesystem::create_directory(masterFolder);
+	mkdir(masterFolder,S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	masterFolder+="//";
 
 	string baseHillStructure("randomHillStructure");
@@ -231,7 +232,7 @@ int main(int argc, char* argv[]){
 	for(int set=0;set<numOfSets;set++){
 		string currentFolder=masterFolder+"outputSet_"+to_string(set);
 		currentFolder+="\\";
-		filesystem::create_directory(currentFolder);
+		mkdir(currentFolder,S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
 		ofstream fitnessValuesOut(currentFolder+"fitnessMasterOut_.txt");
 		//reset particles in new positions
