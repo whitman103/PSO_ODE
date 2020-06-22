@@ -54,7 +54,7 @@ int main(int argc, char* argv[]){
 	
 	string masterFolder="MasterFolder";
 	mkdir(masterFolder.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-	masterFolder+="//";
+	masterFolder+="\\\\";
 
 	string baseHillStructure("randomHillStructure");
 	
@@ -231,7 +231,7 @@ int main(int argc, char* argv[]){
 	
 	for(int set=0;set<numOfSets;set++){
 		string currentFolder=masterFolder+"outputSet_"+to_string(set);
-		currentFolder+="\\";
+		currentFolder+="\\\\";
 		mkdir(currentFolder.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
 		ofstream fitnessValuesOut(currentFolder+"fitnessMasterOut_.txt");
