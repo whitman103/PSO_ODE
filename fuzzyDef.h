@@ -81,7 +81,7 @@ class Particle{
 	double constBound;
 	double normBound;
 	double decayBound;
-	void dumpParticleDetails(string id);
+	void dumpParticleDetails(string rootFolder, string id);
 	double performUpdate(boost::mt19937* inRand, FuzzyTree* fuzzyStruct, double parameterVectorToSend[]);
 	private:
 };

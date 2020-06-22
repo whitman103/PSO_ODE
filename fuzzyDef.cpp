@@ -168,8 +168,8 @@ Particle::~Particle(){
 	
 }
 
-void Particle::dumpParticleDetails(string id){
-	ofstream outParticle("particleDump_"+id+".txt");
+void Particle::dumpParticleDetails(string rootFolder, string id){
+	ofstream outParticle(rootFolder+"particleDump_"+id+".txt");
 	outParticle<<"#m N: species Power Constant Norm Pos/Neg"<<endl;
 	outParticle<<normBestPos.size()<<" ";
 	int reactionCount(0);
