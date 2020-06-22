@@ -48,9 +48,9 @@ string convertHillStructToReactions(vector<vector<hillStruct> >& outStruct);
 int main(int argc, char* argv[]){
 	
 	
-	int numIterations(3);
-	int numParticles(3);
-	int numOfSets(5);
+	int numIterations(100);
+	int numParticles(20);
+	int numOfSets(10);
 	
 	string masterFolder="MasterFolder";
 	mkdir(masterFolder,S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
