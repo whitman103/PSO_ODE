@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <string>
 #include <sstream>
-#include <filesystem>
+#include <boost/filesystem.hpp>
 #include "GillespieFunctions.h"
 #include "fuzzyDef.h"
 #include <mpi.h>
@@ -47,8 +47,12 @@ string convertHillStructToReactions(vector<vector<hillStruct> >& outStruct);
 int main(int argc, char* argv[]){
 	
 	
+	int numIterations(3);
+	int numParticles(3);
+	int numOfSets(5);
+	
 	string masterFolder="MasterFolder";
-	filesystem::create_directory(masterFolder);
+	boost::filesystem::create_directory(masterFolder);
 	masterFolder+="//";
 
 	string baseHillStructure("randomHillStructure");
@@ -153,7 +157,6 @@ int main(int argc, char* argv[]){
 	
 
 	
-	int numParticles(20);
 	vector<Particle> particleSwarm;
 	vector<Particle> resetSwarm;
 	
@@ -225,11 +228,10 @@ int main(int argc, char* argv[]){
 	}
 	generator.seed(time(NULL)+taskID);
 	
-	int numOfSets(10);
 	for(int set=0;set<numOfSets;set++){
 		string currentFolder=masterFolder+"outputSet_"+to_string(set);
 		currentFolder+="\\";
-		filesystem::create_directory(currentFolder);
+		boost::filesystem::create_directory(currentFolder);
 
 		ofstream fitnessValuesOut(currentFolder+"fitnessMasterOut_.txt");
 		//reset particles in new positions
@@ -368,7 +370,6 @@ int main(int argc, char* argv[]){
 		
 		
 		// Iterate the solutions for PSO
-		int numIterations(100);
 		for(int iteration=0;iteration<numIterations;iteration++){
 			//Generate distributions
 			for(int run=0;run<numOfRuns;run++){

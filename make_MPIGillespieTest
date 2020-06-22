@@ -94,7 +94,7 @@ MOREFLAGS= -Wpedantic -Wpointer-arith -Wcast-qual -Wcast-align \
            -Wwrite-strings -fshort-enums 
 
 # add relevant libraries and link options
-LIBS=           
+LIBS= -lboost_system -lboost_filesystem     
 LDFLAGS= 
  
 ###########################################################################
