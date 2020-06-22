@@ -8,9 +8,9 @@
 #include <algorithm>
 #include <string>
 #include <sstream>
-#include <filesystem>
 #include "GillespieFunctions.h"
 #include "fuzzyDef.h"
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <mpi.h>
 using namespace std;
@@ -53,7 +53,7 @@ int main(int argc, char* argv[]){
 	int numOfSets(10);
 	
 	string masterFolder="MasterFolder";
-	mkdir(masterFolder,S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+	mkdir(masterFolder.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	masterFolder+="//";
 
 	string baseHillStructure("randomHillStructure");
@@ -232,7 +232,7 @@ int main(int argc, char* argv[]){
 	for(int set=0;set<numOfSets;set++){
 		string currentFolder=masterFolder+"outputSet_"+to_string(set);
 		currentFolder+="\\";
-		mkdir(currentFolder,S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		mkdir(currentFolder.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
 		ofstream fitnessValuesOut(currentFolder+"fitnessMasterOut_.txt");
 		//reset particles in new positions
