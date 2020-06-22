@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <string>
 #include <sstream>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include "GillespieFunctions.h"
 #include "fuzzyDef.h"
 #include <mpi.h>
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]){
 	int numOfSets(5);
 	
 	string masterFolder="MasterFolder";
-	boost::filesystem::create_directory(masterFolder);
+	filesystem::create_directory(masterFolder);
 	masterFolder+="//";
 
 	string baseHillStructure("randomHillStructure");
@@ -231,7 +231,7 @@ int main(int argc, char* argv[]){
 	for(int set=0;set<numOfSets;set++){
 		string currentFolder=masterFolder+"outputSet_"+to_string(set);
 		currentFolder+="\\";
-		boost::filesystem::create_directory(currentFolder);
+		filesystem::create_directory(currentFolder);
 
 		ofstream fitnessValuesOut(currentFolder+"fitnessMasterOut_.txt");
 		//reset particles in new positions
