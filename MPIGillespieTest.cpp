@@ -54,7 +54,7 @@ int main(int argc, char* argv[]){
 	
 	string masterFolder="MasterFolder";
 	mkdir(masterFolder.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-	masterFolder+="////";
+	masterFolder+="//";
 
 	string baseHillStructure("randomHillStructure");
 	
@@ -230,11 +230,6 @@ int main(int argc, char* argv[]){
 	generator.seed(time(NULL)+taskID);
 	
 	for(int set=0;set<numOfSets;set++){
-		string currentFolder=masterFolder+"outputSet_"+to_string(set);
-		mkdir(currentFolder.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-		currentFolder+="////";
-
-		ofstream fitnessValuesOut(currentFolder+"fitnessMasterOut_.txt");
 		//reset particles in new positions
 		particleSwarm=resetSwarm;
 
@@ -466,7 +461,6 @@ int main(int argc, char* argv[]){
 			if(taskID==0){
 				bool setNewGlobalBest(false);
 				for(int i=0;i<numParticles;i++){
-					fitnessValuesOut<<fitnessContainer[i]<<" ";
 					if(fitnessContainer[i]<bestFitnessValue){
 						bestFitnessValue=fitnessContainer[i];
 						setNewGlobalBest=true;
@@ -476,7 +470,6 @@ int main(int argc, char* argv[]){
 						fitnessNormalization=fitnessContainer[i];
 					}
 				}
-				fitnessValuesOut<<endl;
 				
 				if(setNewGlobalBest){
 					for(int i=0;i<sizeOfParameterVector;i++){
@@ -505,7 +498,6 @@ int main(int argc, char* argv[]){
 		}
 		
 		
-		myParticle.dumpParticleDetails(currentFolder,to_string(taskID));
 		if(taskID==0){
 			fillingIndex=0;
 			for(int i=0;i<(int)myParticle.sampleSolution.size();i++){
@@ -524,9 +516,8 @@ int main(int argc, char* argv[]){
 				myParticle.decayConsts[i]=globalBestParameterSet[fillingIndex];
 				fillingIndex++;
 			}
-			myParticle.dumpParticleDetails(currentFolder,"globalBest");
+			myParticle.dumpParticleDetails(masterFolder,"globalBest_"+to_string(set));
 		}
-		fitnessValuesOut.close();
 	}
 			
 	
