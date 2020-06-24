@@ -13,8 +13,8 @@ using namespace std;
 
 int main(){
 
-
-    ifstream inData("MasterFolder//particleDump_testValues.txt");
+    string inputFolder("MasterFolder2")
+    ifstream inData(inputFolder+"//particleDump_testValues.txt");
     string throwData("");
     double inHold(0);
     getline(inData,throwData);
@@ -49,7 +49,7 @@ int main(){
 
     
 
-    ofstream outPlot("trueOutPlot.txt");
+    ofstream outPlot(inputFolder+"//trueOutPlot.txt");
     for(int i=0;i<(int)trueParameters.size();i++){
         for(int j=0;j<(int)trueParameters[i].size();j++){
             outPlot<<trueParameters[i][j]<<" ";
@@ -60,10 +60,10 @@ int main(){
     }
     outPlot.close();
 
-    outPlot.open("fitData.txt");
+    outPlot.open(inputFolder+"//fitData.txt");
 
     for(int fileIndex=0;fileIndex<numParticles;fileIndex++){
-        inData.open("MasterFolder//particleDump_globalBest_"+to_string(fileIndex)+".txt");
+        inData.open(inputFolder+"//particleDump_globalBest_"+to_string(fileIndex)+".txt");
         getline(inData,throwData);
         inData>>numSpecies;//Throw extras
         inData>>inHold;//Throw extras
