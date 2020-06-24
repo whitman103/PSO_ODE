@@ -205,11 +205,7 @@ int main(int argc, char* argv[]){
 	
 	
 	
-	double fitnessNormalization(0);
-	double bestFitnessValue(1e13);
-	double fitnessContainer[numParticles];
-	double fitnessValue(0);
-	int paramsPerReaction(2);
+	
 	
 	int sizeOfParameterVector(numInteractionConsts+specNum.size());
 	double parameterMatrixHold[(sizeOfParameterVector)*(numParticles)];
@@ -232,6 +228,11 @@ int main(int argc, char* argv[]){
 	for(int set=0;set<numOfSets;set++){
 		//reset particles in new positions
 		particleSwarm=resetSwarm;
+		double fitnessNormalization(0);
+		double bestFitnessValue(1e13);
+		double fitnessContainer[numParticles];
+		double fitnessValue(0);
+		int paramsPerReaction(2);
 
 		//first Time setup
 		
