@@ -14,11 +14,11 @@ using namespace std;
 int main(){
 
 
-    ifstream inData("MasterFolder\\particleDump_testValues.txt");
+    ifstream inData("MasterFolder//particleDump_testValues.txt");
     string throwData("");
     double inHold(0);
     getline(inData,throwData);
-    int numSpecies(0), numPlots(0), hillParameters(2);
+    int numSpecies(0), numPlots(0), hillParameters(2), numParticles(5);
    
     inData>>numSpecies;
     inData>>inHold;
@@ -62,8 +62,8 @@ int main(){
 
     outPlot.open("fitData.txt");
 
-    for(int fileIndex=0;fileIndex<5;fileIndex++){
-        inData.open("MasterFolder\\particleDump_globalBest_"+to_string(fileIndex)+".txt");
+    for(int fileIndex=0;fileIndex<numParticles;fileIndex++){
+        inData.open("MasterFolder//particleDump_globalBest_"+to_string(fileIndex)+".txt");
         getline(inData,throwData);
         inData>>numSpecies;//Throw extras
         inData>>inHold;//Throw extras
