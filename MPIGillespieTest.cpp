@@ -131,14 +131,24 @@ int main(int argc, char* argv[]){
 			tuple<int,double> hold=ReactionObject1.PerformTimeStep2(specNum);
 			lastReaction=get<0>(hold);
 			runTime+=get<1>(hold);
-			ReactionObject1.specChange(specNum,get<0>(hold),ReactionObject1.changeCoeffs);
-			
-			
-			if(runTime>reportTimes[reportIndex]){
-				for(int i=0;i<(int)specNum.size();i++){
-					testDist[reportIndex][i][run]=specNum[i];
+			if(get<1>(hold)<0){
+				for(int index=reportIndex;index<reportTimes.size();index++){
+					for(int i=0;i<(int)specNum.size();i++){
+						testDist[index][i][run]=specNum[i];
+					}
 				}
-				reportIndex++;
+				reportIndex=reportTimes.size();
+			}
+			else{
+				ReactionObject1.specChange(specNum,get<0>(hold),ReactionObject1.changeCoeffs);
+			
+				
+				if(runTime>reportTimes[reportIndex]){
+					for(int i=0;i<(int)specNum.size();i++){
+						testDist[reportIndex][i][run]=specNum[i];
+					}
+					reportIndex++;
+				}
 			}
 		}while(reportIndex<(int)reportTimes.size());
 	}
@@ -277,14 +287,24 @@ int main(int argc, char* argv[]){
 				tuple<int,double> hold=ReactionObject1.PerformTimeStep2(specNum);
 				lastReaction=get<0>(hold);
 				runTime+=get<1>(hold);
-				ReactionObject1.specChange(specNum,get<0>(hold),ReactionObject1.changeCoeffs);
-				
-				
-				if(runTime>reportTimes[reportIndex]){
-					for(int i=0;i<(int)specNum.size();i++){
-						outDist[reportIndex][i][run]=specNum[i];
+				if(get<1>(hold)<0){
+					for(int index=reportIndex;index<reportTimes.size();index++){
+						for(int i=0;i<(int)specNum.size();i++){
+							testDist[index][i][run]=specNum[i];
+						}
 					}
-					reportIndex++;
+					reportIndex=reportTimes.size();
+				}
+				else{
+					ReactionObject1.specChange(specNum,get<0>(hold),ReactionObject1.changeCoeffs);
+				
+					
+					if(runTime>reportTimes[reportIndex]){
+						for(int i=0;i<(int)specNum.size();i++){
+							testDist[reportIndex][i][run]=specNum[i];
+						}
+						reportIndex++;
+					}
 				}
 			}while(reportIndex<(int)reportTimes.size());
 		}
