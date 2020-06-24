@@ -64,6 +64,9 @@ int main(){
 
     for(int fileIndex=0;fileIndex<5;fileIndex++){
         inData.open("MasterFolder\\particleDump_globalBest_"+to_string(fileIndex)+".txt");
+        getline(inData,throwData);
+        inData>>numSpecies;//Throw extras
+        inData>>inHold;//Throw extras
         if(!inData.good()){
             cout<<"particle doesn't exist";
             return 0;
