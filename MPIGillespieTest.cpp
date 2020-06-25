@@ -160,6 +160,15 @@ int main(int argc, char* argv[]){
 		}
 	}
 	
+	ofstream realData(masterFolder+"testDataOut.txt");
+	for(int i=0;i<(int)testMeans.size();i++){
+		for(int j=0;j<(int)testMeans.size();j++){
+			realData<<testMeans[i][j]<<" ";
+		}
+		realData<<endl;
+	}
+	realData.close();
+	
 	
 	
 	

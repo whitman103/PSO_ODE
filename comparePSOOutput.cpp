@@ -13,13 +13,21 @@ using namespace std;
 
 int main(){
 
-    string inputFolder("MasterFolder2")
+    string inputFolder("MasterFolder");
     ifstream inData(inputFolder+"//particleDump_testValues.txt");
+    if(!inData.good()){
+        cout<<"can't load data";
+        return 0;
+    }
     string throwData("");
     double inHold(0);
     getline(inData,throwData);
     int numSpecies(0), numPlots(0), hillParameters(2), numParticles(5);
    
+    ofstream texOut("texOutput.tex");
+    texOut<<"\\begin{equation}"<<endl;
+    texOut<<"\\begin{aligned}"<<endl;
+
     inData>>numSpecies;
     inData>>inHold;
     numPlots=inHold;
@@ -29,19 +37,33 @@ int main(){
 
     int fillingIndex(0);
     for(int i=0;i<numSpecies;i++){
+        texOut<<"\\pd{\\langle N_"+to_string(i)+"\\rangle}{t}&=\\left(";
+        bool inverseOrNot(false);
+        int speciesLabel(0);
         //Throw out first input, simply labels species
         inData>>inHold;
         int currentNumberReactions(0);
         inData>>currentNumberReactions;
         for(int j=0;j<currentNumberReactions;j++){
-            inData>>inHold;//species Label
+            inData>>speciesLabel;//species Label
             inData>>inHold;//power 
             inData>>trueParameters[fillingIndex][0];//Constant
             inData>>trueParameters[fillingIndex][1];//Norm
             inData>>inHold;//Pos/Neg
+            if(inHold==0){
+               texOut<<"-d_{"+to_string(fillingIndex)+"}\\frac{N_"+to_string(speciesLabel)+"^2}{N_"+to_string(speciesLabel)+"^2+K_{"+to_string(fillingIndex)+"}^2}";
+            }
+            else{
+                texOut<<"+c_{"+to_string(fillingIndex)+"}\\frac{N_"+to_string(speciesLabel)+"^2}{N_"+to_string(speciesLabel)+"^2+K_{"+to_string(fillingIndex)+"}^2}";
+            }
             fillingIndex++;
         }
+        texOut<<"-\\lambda_"+to_string(i)+"\\right)\\langle N_"+to_string(i)+"\\rangle";
+        texOut<<"\\\\"<<endl;
     }
+    texOut<<"\\end{aligned}"<<endl;
+    texOut<<"\\end{equation}"<<endl;
+    texOut.close();
     for(int i=0;i<numSpecies;i++){
         inData>>trueDecay[i];
     }
