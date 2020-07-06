@@ -388,12 +388,10 @@ int main(int argc, char* argv[]){
 		
 		// Iterate the solutions for PSO
 		for(int iteration=0;iteration<numIterations;iteration++){
-			cout<<iteration<<endl;
 			//Generate distributions
 			for(int run=0;run<numOfRuns;run++){
 				specNum=resetSpecNum;
 				double runTime(0);
-				cout<<run<<" "<<taskID<<endl;
 				
 				int reactionIndex(0);
 				
