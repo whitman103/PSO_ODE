@@ -9,7 +9,7 @@
 #include <string>
 #include <sstream>
 #include "GillespieFunctions.h"
-#include "fuzzyDef.h"
+#include "fuzzyDef_three.h"
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <mpi.h>
@@ -41,6 +41,8 @@ inline double Hill(double constant, double power, double argument,double norm){
 
 tuple<int,vector<double>> DistributionFromValues(vector<double> Values);
 double returnMean(vector<double> inDist);
+double returnVariance(vector<double> inList, double mean);
+double fitnessFunction(vector<vector<vector<double> > >& inData, vector<vector<double> >& testMeans, vector<vector<double> >& testVariances);
 void loadHillStructDetails(vector<vector<hillStruct> >& inStructure, string inFile);
 string convertHillStructToReactions(vector<vector<hillStruct> >& outStruct);
 		
@@ -72,17 +74,20 @@ int main(int argc, char* argv[]){
 	resetSpecNum=specNum;
 	
 	int numOfRuns(2500);
-	double constBound(50), normBound(.05), decayBound(.01);
+	double constBound(50), normBound(.05), decayBound(.01), powerBound(3);
+	tuple<double,double,double,double> particleBounds=make_tuple(constBound,normBound,decayBound,powerBound);
 	vector<double> reportTimes={2,4,8,16};
 	//Create "experimental data"
 	
-	Particle testParticle=Particle(hillDetails,make_tuple(constBound,normBound,decayBound));
+	Particle testParticle=Particle(hillDetails,particleBounds);
 	for(int species=0;species<(int)testParticle.normCurrentPos.size();species++){
 		for(int interaction=0;interaction<(int)testParticle.normCurrentPos[species].size();interaction++){
-			testParticle.normCurrentPos[species][interaction]=randPull()*normBound;
-			testParticle.constCurrentPos[species][interaction]=randPull()*constBound;
+			testParticle.normCurrentPos[species][interaction]=randPull()*testParticle.normBound;
+			testParticle.constCurrentPos[species][interaction]=randPull()*testParticle.constBound;
+			testParticle.powerCurrentPos[species][interaction]=randPull()*testParticle.powerBound;
 			testParticle.sampleSolution[species][interaction].normalization=testParticle.normCurrentPos[species][interaction];
 			testParticle.sampleSolution[species][interaction].constant=testParticle.constCurrentPos[species][interaction];
+			testParticle.sampleSolution[species][interaction].power=testParticle.powerCurrentPos[species][interaction];
 		}
 	}
 	for(int species=0;species<(int)specNum.size();species++){
@@ -154,9 +159,15 @@ int main(int argc, char* argv[]){
 	}
 	
 	vector<vector<double> > testMeans(reportTimes.size(), vector<double> (specNum.size(),0));
+	vector<vector<double> > testVariances(reportTimes.size(),vector<double> (specNum.size(),0));
 	for(int i=0;i<(int)reportTimes.size();i++){
 		for(int j=0;j<(int)specNum.size();j++){
 			testMeans[i][j]=returnMean(testDist[i][j]);
+		}
+	}
+	for(int i=0;i<(int)reportTimes.size();i++){
+		for(int j=0;j<(int)specNum.size();j++){
+			testVariances[i][j]=returnVariance(testDist[i][j],testMeans[i][j]);
 		}
 	}
 	
@@ -183,14 +194,16 @@ int main(int argc, char* argv[]){
 	int numInteractionConsts(0);
 	
 	for(int i=0;i<numParticles;i++){
-		Particle interParticle=Particle(hillDetails,make_tuple(constBound,normBound,decayBound));
+		Particle interParticle=Particle(hillDetails,particleBounds);
 		for(int species=0;species<(int)interParticle.normCurrentPos.size();species++){
 			for(int interaction=0;interaction<(int)interParticle.normCurrentPos[species].size();interaction++){
-				interParticle.normCurrentPos[species][interaction]=randPull()*normBound;
-				interParticle.constCurrentPos[species][interaction]=randPull()*constBound;
+				interParticle.normCurrentPos[species][interaction]=randPull()*interParticle.normBound;
+				interParticle.constCurrentPos[species][interaction]=randPull()*interParticle.constBound;
+				interParticle.powerCurrentPos[species][interaction]=randPull()*interParticle.powerBound;
 				interParticle.constVelocity[species][interaction]=0;
 				interParticle.normVelocity[species][interaction]=0;
-				numInteractionConsts+=2;
+				interParticle.powerVelocity[species][interaction]=0;
+				numInteractionConsts+=3;
 			}
 		}
 		interParticle.normBestPos=interParticle.normCurrentPos;
@@ -268,7 +281,7 @@ int main(int argc, char* argv[]){
 			
 			for(int i=0;i<(int)myParticle.sampleSolution.size();i++){
 				for(int j=0;j<(int)myParticle.sampleSolution[i].size();j++){
-					ReactionObject1.reactConsts[reactionIndex]=Hill(myParticle.constCurrentPos[i][j],myParticle.sampleSolution[i][j].power, specNum[myParticle.sampleSolution[i][j].speciesLabel],myParticle.normCurrentPos[i][j]);
+					ReactionObject1.reactConsts[reactionIndex]=Hill(myParticle.constCurrentPos[i][j],myParticle.powerCurrentPos[i][j], specNum[myParticle.sampleSolution[i][j].speciesLabel],myParticle.normCurrentPos[i][j]);
 					reactionIndex++;
 				}
 			}
@@ -299,7 +312,7 @@ int main(int argc, char* argv[]){
 				if(get<1>(hold)<0){
 					for(int index=reportIndex;index<reportTimes.size();index++){
 						for(int i=0;i<(int)specNum.size();i++){
-							testDist[index][i][run]=specNum[i];
+							outDist[index][i][run]=specNum[i];
 						}
 					}
 					reportIndex=reportTimes.size();
@@ -310,27 +323,18 @@ int main(int argc, char* argv[]){
 					
 					if(runTime>reportTimes[reportIndex]){
 						for(int i=0;i<(int)specNum.size();i++){
-							testDist[reportIndex][i][run]=specNum[i];
+							outDist[reportIndex][i][run]=specNum[i];
 						}
 						reportIndex++;
 					}
 				}
 			}while(reportIndex<(int)reportTimes.size());
 		}
-		
-		vector<vector<double> > outMeans(reportTimes.size(), vector<double> (specNum.size(),0));
-		for(int i=0;i<(int)reportTimes.size();i++){
-			for(int j=0;j<(int)specNum.size();j++){
-				outMeans[i][j]=returnMean(outDist[i][j]);
-			}
-		}
+
+
 		myParticle.lastFitness=0;
-		fitnessValue=0;
-		for(int i=0;i<(int)testMeans.size();i++){
-			for(int j=0;j<(int)testMeans[i].size();j++){
-				fitnessValue+=pow(outMeans[i][j]-testMeans[i][j],2);
-			}
-		}
+		fitnessValue=fitnessFunction(testDist,testMeans,testVariances);
+
 		myParticle.currentFitness=fitnessValue;
 		fitnessNormalization=fitnessValue;
 		
@@ -406,7 +410,7 @@ int main(int argc, char* argv[]){
 				
 				for(int i=0;i<(int)myParticle.sampleSolution.size();i++){
 					for(int j=0;j<(int)myParticle.sampleSolution[i].size();j++){
-						ReactionObject1.reactConsts[reactionIndex]=Hill(myParticle.constCurrentPos[i][j],myParticle.sampleSolution[i][j].power, specNum[myParticle.sampleSolution[i][j].speciesLabel],myParticle.normCurrentPos[i][j]);
+						ReactionObject1.reactConsts[reactionIndex]=Hill(myParticle.constCurrentPos[i][j],myParticle.powerCurrentPos[i][j], specNum[myParticle.sampleSolution[i][j].speciesLabel],myParticle.normCurrentPos[i][j]);
 						reactionIndex++;
 					}
 				}
@@ -424,7 +428,7 @@ int main(int argc, char* argv[]){
 					for(int i=0;i<(int)myParticle.sampleSolution.size();i++){
 						for(int j=0;j<(int)myParticle.sampleSolution[i].size();j++){
 							if(ReactionObject1.changeCoeffs[lastReaction][myParticle.sampleSolution[i][j].speciesLabel]!=0&&runTime!=0){
-								ReactionObject1.reactConsts[reactionIndex]=Hill(myParticle.constCurrentPos[i][j],myParticle.sampleSolution[i][j].power, specNum[myParticle.sampleSolution[i][j].speciesLabel],myParticle.normCurrentPos[i][j]);
+								ReactionObject1.reactConsts[reactionIndex]=Hill(myParticle.constCurrentPos[i][j],myParticle.powerCurrentPos[i][j], specNum[myParticle.sampleSolution[i][j].speciesLabel],myParticle.normCurrentPos[i][j]);
 							}
 							reactionIndex++;
 						}
@@ -446,22 +450,15 @@ int main(int argc, char* argv[]){
 				}while(reportIndex<(int)reportTimes.size());
 			}
 			
-			for(int i=0;i<(int)reportTimes.size();i++){
-				for(int j=0;j<(int)specNum.size();j++){
-					outMeans[i][j]=returnMean(outDist[i][j]);
-				}
-			}
+			
 			myParticle.lastFitness=myParticle.currentFitness;
-			fitnessValue=0;
-			for(int i=0;i<(int)testMeans.size();i++){
-				for(int j=0;j<(int)testMeans[i].size();j++){
-					fitnessValue+=pow(outMeans[i][j]-testMeans[i][j],2);
-				}
-			}
+			fitnessValue=fitnessFunction(outDist,testMeans,testVariances);
 			myParticle.currentFitness=fitnessValue;
+
 			if(myParticle.currentFitness<myParticle.bestFitness){
 				myParticle.normBestPos=myParticle.normCurrentPos;
 				myParticle.constBestPos=myParticle.constCurrentPos;
+				myParticle.powerBestPos=myParticle.powerCurrentPos;
 				myParticle.bestDecayConsts=myParticle.decayConsts;
 				myParticle.bestFitness=myParticle.currentFitness;
 			}
@@ -477,6 +474,12 @@ int main(int argc, char* argv[]){
 			for(int i=0;i<(int)myParticle.constCurrentPos.size();i++){
 				for(int j=0;j<(int)myParticle.constCurrentPos[i].size();j++){
 					parameterVectorToSend[fillingIndex]=myParticle.constCurrentPos[i][j];
+					fillingIndex++;
+				}
+			}
+			for(int i=0;i<(int)myParticle.powerCurrentPos.size();i++){
+				for(int j=0;j<(int)myParticle.powerCurrentPos[i].size();j++){
+					parameterVectorToSend[fillingIndex]=myParticle.powerCurrentPos[i][j];
 					fillingIndex++;
 				}
 			}
@@ -524,6 +527,7 @@ int main(int argc, char* argv[]){
 			for(int j=0;j<(int)myParticle.sampleSolution[i].size();j++){
 				myParticle.sampleSolution[i][j].constant=myParticle.constBestPos[i][j];
 				myParticle.sampleSolution[i][j].normalization=myParticle.normBestPos[i][j];
+				myParticle.sampleSolution[i][j].power=myParticle.powerBestPos[i][j];
 			}
 		}
 		
@@ -539,6 +543,12 @@ int main(int argc, char* argv[]){
 			for(int i=0;i<(int)myParticle.sampleSolution.size();i++){
 				for(int j=0;j<(int)myParticle.sampleSolution[i].size();j++){
 					myParticle.sampleSolution[i][j].constant=globalBestParameterSet[fillingIndex];
+					fillingIndex++;
+				}
+			}
+			for(int i=0;i<(int)myParticle.sampleSolution.size();i++){
+				for(int j=0;j<(int)myParticle.sampleSolution[i].size();j++){
+					myParticle.sampleSolution[i][j].power=globalBestParameterSet[fillingIndex];
 					fillingIndex++;
 				}
 			}
@@ -626,6 +636,47 @@ double returnMean(vector<double> inList){
 	}
 	outHold/=(double)inList.size();
 	return outHold;
+}
+
+double returnVariance(vector<double> inList, double mean){
+	double outHold(0);
+	for(int i=0;i<(int)inList.size();i++){
+		outHold+=pow(inList[i]-mean,2);
+	}
+	outHold/=(double)inList.size();
+	return outHold;
+}
+
+double fitnessFunction(vector<vector<vector<double> > >& inData,vector<vector<double> >& testMeans,vector<vector<double> >& testVariances){
+	vector<vector<double> > outMeans(inData.size(), vector<double> (inData[0].size(),0));
+	vector<vector<double> > outVariances(inData.size(),vector<double> (inData[0].size(),0));
+	for(int i=0;i<(int)inData.size();i++){
+		for(int j=0;j<(int)inData[i].size();j++){
+			outMeans[i][j]=returnMean(inData[i][j]);
+		}
+	}
+	for(int i=0;i<(int)inData.size();i++){
+		for(int j=0;j<(int)inData[i].size();j++){
+			outVariances[i][j]=returnVariance(inData[i][j],outMeans[i][j]);
+		}
+	}
+
+	double fitnessOut(0);
+	for(int i=0;i<(int)outMeans.size();i++){
+		for(int j=0;j<(int)outMeans[i].size();j++){
+			fitnessOut+=pow(outMeans[i][j]-testMeans[i][j],2);
+		}
+	}
+	double varianceContribution(0);
+	for(int i=0;i<(int)outVariances.size();i++){
+		for(int j=0;j<(int)outVariances[i].size();j++){
+			varianceContribution+=pow(testVariances[i][j]-outVariances[i][j],2);
+		}
+	}
+	varianceContribution=sqrt(varianceContribution);
+	varianceContribution/=(double)inData[0].size();
+	fitnessOut+=varianceContribution;
+	return fitnessOut;
 }
 
 tuple<int,vector<double>> DistributionFromValues(vector<double> Values){
