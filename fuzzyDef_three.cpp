@@ -285,7 +285,7 @@ double Particle::performUpdate(boost::mt19937* inRand, FuzzyTree* fuzzyStruct, d
 			double proposedVelocity(0);
 			proposedVelocity+=(*fuzzyStruct).inertia*powerVelocity[i][j];
 			proposedVelocity+=(*fuzzyStruct).social*rand1*(parameterVectorToSend[fillingIndex]-powerCurrentPos[i][j]);
-			proposedVelocity+=(*fuzzyStruct).cognitive*rand2*(constBestPos[i][j]-powerCurrentPos[i][j]);
+			proposedVelocity+=(*fuzzyStruct).cognitive*rand2*(powerBestPos[i][j]-powerCurrentPos[i][j]);
 			interDelta+=pow((parameterVectorToSend[fillingIndex]-powerCurrentPos[i][j])/powerBound,2);
 			//Checks velocity limits
 			if(proposedVelocity<(*fuzzyStruct).U*(-1.*powerBound)){
