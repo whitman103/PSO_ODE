@@ -26,8 +26,8 @@ inline double twoSidedRandPull(){
 	return (2.*randPull()-1);
 }
 
-inline int randSite(int size){
-	return generator()%size;
+inline double randSite(int size){
+	return (double)(generator()%size);
 }
 
 inline double invHill(double constant, double power, double argument, double norm){
@@ -45,14 +45,15 @@ double returnVariance(vector<double> inList, double mean);
 double fitnessFunction(vector<vector<vector<double> > >& inData, vector<vector<double> >& testMeans, vector<vector<double> >& testVariances);
 void loadHillStructDetails(vector<vector<hillStruct> >& inStructure, string inFile);
 string convertHillStructToReactions(vector<vector<hillStruct> >& outStruct);
+void fillParameterArray(double* arrayToFill, Particle myParticle);
 		
 
 int main(int argc, char* argv[]){
 	
 	
-	int numIterations(100);
-	int numParticles(20);
-	int numOfSets(20);
+	int numIterations(2);
+	int numParticles(3);
+	int numOfSets(1);
 	
 	string masterFolder="ThreeFolder";
 	mkdir(masterFolder.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
@@ -75,7 +76,7 @@ int main(int argc, char* argv[]){
 	
 	int numOfRuns(2500);
 	double constBound(50), normBound(.05), decayBound(.01), powerBound(3);
-	tuple<double,double,double,double> particleBounds=make_tuple(constBound,normBound,decayBound,powerBound);
+	tuple<double,double,double,double> particleBounds=make_tuple(constBound,normBound,powerBound,decayBound);
 	vector<double> reportTimes={2,4,8,16};
 	//Create "experimental data"
 	
@@ -84,7 +85,7 @@ int main(int argc, char* argv[]){
 		for(int interaction=0;interaction<(int)testParticle.normCurrentPos[species].size();interaction++){
 			testParticle.normCurrentPos[species][interaction]=randPull()*testParticle.normBound;
 			testParticle.constCurrentPos[species][interaction]=randPull()*testParticle.constBound;
-			testParticle.powerCurrentPos[species][interaction]=randPull()*testParticle.powerBound;
+			testParticle.powerCurrentPos[species][interaction]=0.05+randPull()*testParticle.powerBound;
 			testParticle.sampleSolution[species][interaction].normalization=testParticle.normCurrentPos[species][interaction];
 			testParticle.sampleSolution[species][interaction].constant=testParticle.constCurrentPos[species][interaction];
 			testParticle.sampleSolution[species][interaction].power=testParticle.powerCurrentPos[species][interaction];
@@ -173,7 +174,7 @@ int main(int argc, char* argv[]){
 	
 	ofstream realData(masterFolder+"testDataOut.txt");
 	for(int i=0;i<(int)testMeans.size();i++){
-		for(int j=0;j<(int)testMeans.size();j++){
+		for(int j=0;j<(int)testMeans[i].size();j++){
 			realData<<testMeans[i][j]<<" ";
 		}
 		realData<<endl;
@@ -199,7 +200,7 @@ int main(int argc, char* argv[]){
 			for(int interaction=0;interaction<(int)interParticle.normCurrentPos[species].size();interaction++){
 				interParticle.normCurrentPos[species][interaction]=randPull()*interParticle.normBound;
 				interParticle.constCurrentPos[species][interaction]=randPull()*interParticle.constBound;
-				interParticle.powerCurrentPos[species][interaction]=randPull()*interParticle.powerBound;
+				interParticle.powerCurrentPos[species][interaction]=0.05+randPull()*testParticle.powerBound;
 				interParticle.constVelocity[species][interaction]=0;
 				interParticle.normVelocity[species][interaction]=0;
 				interParticle.powerVelocity[species][interaction]=0;
@@ -208,6 +209,7 @@ int main(int argc, char* argv[]){
 		}
 		interParticle.normBestPos=interParticle.normCurrentPos;
 		interParticle.constBestPos=interParticle.constCurrentPos;
+		interParticle.powerBestPos=interParticle.powerCurrentPos;
 		for(int species=0;species<(int)specNum.size();species++){
 			interParticle.decayConsts[species]=randPull()*decayBound;
 			interParticle.decayVelocities[species]=0;
@@ -310,7 +312,7 @@ int main(int argc, char* argv[]){
 				lastReaction=get<0>(hold);
 				runTime+=get<1>(hold);
 				if(get<1>(hold)<0){
-					for(int index=reportIndex;index<reportTimes.size();index++){
+					for(int index=reportIndex;index<(int)reportTimes.size();index++){
 						for(int i=0;i<(int)specNum.size();i++){
 							outDist[index][i][run]=specNum[i];
 						}
@@ -341,26 +343,11 @@ int main(int argc, char* argv[]){
 		if(myParticle.currentFitness<myParticle.bestFitness){
 			myParticle.normBestPos=myParticle.normCurrentPos;
 			myParticle.constBestPos=myParticle.constCurrentPos;
+			myParticle.powerBestPos=myParticle.powerCurrentPos;
 			myParticle.bestDecayConsts=myParticle.decayConsts;
 		}
 		
-		int fillingIndex(0);
-		for(int i=0;i<(int)myParticle.normCurrentPos.size();i++){
-			for(int j=0;j<(int)myParticle.normCurrentPos[i].size();j++){
-				parameterVectorToSend[fillingIndex]=myParticle.normCurrentPos[i][j];
-				fillingIndex++;
-			}
-		}
-		for(int i=0;i<(int)myParticle.constCurrentPos.size();i++){
-			for(int j=0;j<(int)myParticle.constCurrentPos[i].size();j++){
-				parameterVectorToSend[fillingIndex]=myParticle.constCurrentPos[i][j];
-				fillingIndex++;
-			}
-		}
-		for(int i=0;i<(int)myParticle.decayConsts.size();i++){
-			parameterVectorToSend[fillingIndex]=myParticle.decayConsts[i];
-			fillingIndex++;
-		}
+		fillParameterArray(parameterVectorToSend,myParticle);
 
 		
 		MPI_Gather(&myParticle.currentFitness, 1, MPI_DOUBLE, fitnessContainer, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -401,10 +388,12 @@ int main(int argc, char* argv[]){
 		
 		// Iterate the solutions for PSO
 		for(int iteration=0;iteration<numIterations;iteration++){
+			cout<<iteration<<endl;
 			//Generate distributions
 			for(int run=0;run<numOfRuns;run++){
 				specNum=resetSpecNum;
 				double runTime(0);
+				cout<<run<<" "<<taskID<<endl;
 				
 				int reactionIndex(0);
 				
@@ -414,8 +403,6 @@ int main(int argc, char* argv[]){
 						reactionIndex++;
 					}
 				}
-				
-				
 				
 				for(int i=0;i<(int)myParticle.decayConsts.size();i++){
 					ReactionObject1.reactConsts[reactionIndex]=myParticle.decayConsts[i];
@@ -438,14 +425,24 @@ int main(int argc, char* argv[]){
 					tuple<int,double> hold=ReactionObject1.PerformTimeStep2(specNum);
 					lastReaction=get<0>(hold);
 					runTime+=get<1>(hold);
-					ReactionObject1.specChange(specNum,get<0>(hold),ReactionObject1.changeCoeffs);
-					
-					
-					if(runTime>reportTimes[reportIndex]){
-						for(int i=0;i<(int)specNum.size();i++){
-							outDist[reportIndex][i][run]=specNum[i];
+					if(get<1>(hold)<0){
+						for(int index=reportIndex;index<(int)reportTimes.size();index++){
+							for(int i=0;i<(int)specNum.size();i++){
+								outDist[index][i][run]=specNum[i];
+							}
 						}
-						reportIndex++;
+						reportIndex=reportTimes.size();
+					}
+					else{
+						ReactionObject1.specChange(specNum,get<0>(hold),ReactionObject1.changeCoeffs);
+					
+						
+						if(runTime>reportTimes[reportIndex]){
+							for(int i=0;i<(int)specNum.size();i++){
+								outDist[reportIndex][i][run]=specNum[i];
+							}
+							reportIndex++;
+						}
 					}
 				}while(reportIndex<(int)reportTimes.size());
 			}
@@ -464,29 +461,7 @@ int main(int argc, char* argv[]){
 			}
 			fuzzyStruct.setParameters();
 			
-			fillingIndex=0;
-			for(int i=0;i<(int)myParticle.normCurrentPos.size();i++){
-				for(int j=0;j<(int)myParticle.normCurrentPos[i].size();j++){
-					parameterVectorToSend[fillingIndex]=myParticle.normCurrentPos[i][j];
-					fillingIndex++;
-				}
-			}
-			for(int i=0;i<(int)myParticle.constCurrentPos.size();i++){
-				for(int j=0;j<(int)myParticle.constCurrentPos[i].size();j++){
-					parameterVectorToSend[fillingIndex]=myParticle.constCurrentPos[i][j];
-					fillingIndex++;
-				}
-			}
-			for(int i=0;i<(int)myParticle.powerCurrentPos.size();i++){
-				for(int j=0;j<(int)myParticle.powerCurrentPos[i].size();j++){
-					parameterVectorToSend[fillingIndex]=myParticle.powerCurrentPos[i][j];
-					fillingIndex++;
-				}
-			}
-			for(int i=0;i<(int)myParticle.decayConsts.size();i++){
-				parameterVectorToSend[fillingIndex]=myParticle.decayConsts[i];
-				fillingIndex++;
-			}
+			fillParameterArray(parameterVectorToSend,myParticle);
 			
 			MPI_Gather(&myParticle.currentFitness, 1, MPI_DOUBLE, fitnessContainer, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 			MPI_Gather(parameterVectorToSend, sizeOfParameterVector, MPI_DOUBLE, parameterMatrixHold, sizeOfParameterVector, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -533,7 +508,7 @@ int main(int argc, char* argv[]){
 		
 		
 		if(taskID==0){
-			fillingIndex=0;
+			int fillingIndex=0;
 			for(int i=0;i<(int)myParticle.sampleSolution.size();i++){
 				for(int j=0;j<(int)myParticle.sampleSolution[i].size();j++){
 					myParticle.sampleSolution[i][j].normalization=globalBestParameterSet[fillingIndex];
@@ -686,6 +661,32 @@ tuple<int,vector<double>> DistributionFromValues(vector<double> Values){
 		outputDistribution[Values[i]]+=1/(double)Counts;
 	}
 	return make_tuple(Counts,outputDistribution);
+}
+
+void fillParameterArray(double* arrayToFill, Particle myParticle){
+	int fillingIndex(0);
+	for(int i=0;i<(int)myParticle.normCurrentPos.size();i++){
+		for(int j=0;j<(int)myParticle.normCurrentPos[i].size();j++){
+			arrayToFill[fillingIndex]=myParticle.normCurrentPos[i][j];
+			fillingIndex++;
+		}
+	}
+	for(int i=0;i<(int)myParticle.constCurrentPos.size();i++){
+		for(int j=0;j<(int)myParticle.constCurrentPos[i].size();j++){
+			arrayToFill[fillingIndex]=myParticle.constCurrentPos[i][j];
+			fillingIndex++;
+		}
+	}
+	for(int i=0;i<(int)myParticle.powerCurrentPos.size();i++){
+		for(int j=0;j<(int)myParticle.powerCurrentPos[i].size();j++){
+			arrayToFill[fillingIndex]=myParticle.powerCurrentPos[i][j];
+			fillingIndex++;
+		}
+	}
+	for(int i=0;i<(int)myParticle.decayConsts.size();i++){
+		arrayToFill[fillingIndex]=myParticle.decayConsts[i];
+		fillingIndex++;
+	}
 }
 
 void loadHillStructDetails(vector<vector<hillStruct> >& inStructure, string inFile){
