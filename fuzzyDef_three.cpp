@@ -143,6 +143,9 @@ Particle::Particle(vector<vector<hillStruct> > inSolution, tuple<double,double,d
 	constCurrentPos.resize(numSpecies);
 	constBestPos.resize(numSpecies);
 	constVelocity.resize(numSpecies);
+	powerCurrentPos.resize(numSpecies);
+	powerBestPos.resize(numSpecies);
+	powerVelocity.resize(numSpecies);
 	decayConsts.resize(numSpecies);
 	decayVelocities.resize(numSpecies);
 	bestDecayConsts.resize(numSpecies);
@@ -160,6 +163,9 @@ Particle::Particle(vector<vector<hillStruct> > inSolution, tuple<double,double,d
 		constCurrentPos[i].resize(numInteractions);
 		constBestPos[i].resize(numInteractions);
 		constVelocity[i].resize(numInteractions);
+		powerCurrentPos[i].resize(numInteractions);
+		powerBestPos[i].resize(numInteractions);
+		powerVelocity[i].resize(numInteractions);
 	}
 }
 
