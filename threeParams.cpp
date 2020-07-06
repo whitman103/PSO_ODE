@@ -51,10 +51,10 @@ int main(int argc, char* argv[]){
 	
 	
 	int numIterations(100);
-	int numParticles(3);
-	int numOfSets(5);
+	int numParticles(20);
+	int numOfSets(20);
 	
-	string masterFolder="MasterFolder";
+	string masterFolder="ThreeFolder";
 	mkdir(masterFolder.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	masterFolder+="//";
 

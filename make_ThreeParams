@@ -41,11 +41,11 @@
 ########################################################################### 
 
 # The base for the names of the makefile, executable command, etc.
-BASE=  ThreeParams
+BASE=  threeParams
 
 # Put all C++ (or other) source files here.  NO SPACES after continuation \'s.
 SRCS= \
-ThreeParams.cpp\
+threeParams.cpp\
 GillespieFunctions.cpp\
 fuzzyDef_three.cpp\
 
