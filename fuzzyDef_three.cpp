@@ -254,7 +254,7 @@ double Particle::performUpdate(boost::mt19937* inRand, FuzzyTree* fuzzyStruct, d
 			interDelta+=pow((parameterVectorToSend[fillingIndex]-constCurrentPos[i][j])/constBound,2);
 			//Checks velocity limits
 			if(proposedVelocity<(*fuzzyStruct).U*(-1.*constBound)){
-				proposedVelocity=(*fuzzyStruct).U*(constBound);
+				proposedVelocity=-1.*(*fuzzyStruct).U*(constBound);
 			}
 			if(proposedVelocity>(*fuzzyStruct).U*(constBound)){
 				proposedVelocity=(*fuzzyStruct).U*(constBound);
@@ -289,14 +289,14 @@ double Particle::performUpdate(boost::mt19937* inRand, FuzzyTree* fuzzyStruct, d
 			interDelta+=pow((parameterVectorToSend[fillingIndex]-powerCurrentPos[i][j])/powerBound,2);
 			//Checks velocity limits
 			if(proposedVelocity<(*fuzzyStruct).U*(-1.*powerBound)){
-				proposedVelocity=(*fuzzyStruct).U*(powerBound);
+				proposedVelocity=-1.*(*fuzzyStruct).U*(powerBound);
 			}
 			if(proposedVelocity>(*fuzzyStruct).U*(powerBound)){
 				proposedVelocity=(*fuzzyStruct).U*(powerBound);
 			}
 			//Checks bounds of parameter space;
 			if(powerCurrentPos[i][j]+proposedVelocity<0){
-				powerCurrentPos[i][j]=(-1.*proposedVelocity)*.1*((double)(*inRand)()/(double)(*inRand).max());
+				powerCurrentPos[i][j]=powerBound*.05;
 				powerVelocity[i][j]=(-1.*proposedVelocity)*.1;
 			}
 			else{
@@ -323,7 +323,7 @@ double Particle::performUpdate(boost::mt19937* inRand, FuzzyTree* fuzzyStruct, d
 		interDelta+=pow((parameterVectorToSend[fillingIndex]-decayConsts[i])/decayBound,2);
 		//Checks velocity limits
 		if(proposedVelocity<(*fuzzyStruct).U*(-1.*decayBound)){
-			proposedVelocity=(*fuzzyStruct).U*(decayBound);
+			proposedVelocity=-1.*(*fuzzyStruct).U*(decayBound);
 		}
 		if(proposedVelocity>(*fuzzyStruct).U*(decayBound)){
 			proposedVelocity=(*fuzzyStruct).U*(decayBound);

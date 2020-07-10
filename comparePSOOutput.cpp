@@ -13,7 +13,7 @@ using namespace std;
 
 int main(){
 
-    string inputFolder("MasterFolder");
+    string inputFolder("ThreeFolder");
     ifstream inData(inputFolder+"//particleDump_testValues.txt");
     if(!inData.good()){
         cout<<"can't load data";
@@ -22,7 +22,7 @@ int main(){
     string throwData("");
     double inHold(0);
     getline(inData,throwData);
-    int numSpecies(0), numPlots(0), hillParameters(2), numParticles(5);
+    int numSpecies(0), numPlots(0), hillParameters(3), numParticles(25);
    
     ofstream texOut("texOutput.tex");
     texOut<<"\\begin{equation}"<<endl;
@@ -31,7 +31,7 @@ int main(){
     inData>>numSpecies;
     inData>>inHold;
     numPlots=inHold;
-    //trueParameters[0] are Constants, trueParameters[1] are norms
+    //trueParameters[0] are Constants, trueParameters[1] are norms, trueParameters[2] are powers
     vector<vector<double> > trueParameters(numPlots,vector<double>(hillParameters,0));
     vector<double> trueDecay(numSpecies,0);
 
@@ -46,7 +46,7 @@ int main(){
         inData>>currentNumberReactions;
         for(int j=0;j<currentNumberReactions;j++){
             inData>>speciesLabel;//species Label
-            inData>>inHold;//power 
+            inData>>trueParameters[fillingIndex][2];//power 
             inData>>trueParameters[fillingIndex][0];//Constant
             inData>>trueParameters[fillingIndex][1];//Norm
             inData>>inHold;//Pos/Neg
@@ -101,7 +101,7 @@ int main(){
             inData>>currentNumberReactions;
             for(int j=0;j<currentNumberReactions;j++){
                 inData>>inHold;//species Label
-                inData>>inHold;//power 
+                inData>>trueParameters[fillingIndex][2];//power 
                 inData>>trueParameters[fillingIndex][0];//Constant
                 inData>>trueParameters[fillingIndex][1];//Norm
                 inData>>inHold;//Pos/Neg

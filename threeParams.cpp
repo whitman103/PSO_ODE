@@ -53,7 +53,7 @@ int main(int argc, char* argv[]){
 	
 	int numIterations(2);
 	int numParticles(3);
-	int numOfSets(1);
+	int numOfSets(5);
 	
 	string masterFolder="ThreeFolder";
 	mkdir(masterFolder.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
@@ -335,8 +335,8 @@ int main(int argc, char* argv[]){
 
 
 		myParticle.lastFitness=0;
-		fitnessValue=fitnessFunction(testDist,testMeans,testVariances);
-
+		fitnessValue=fitnessFunction(outDist,testMeans,testVariances);
+		cout<<fitnessValue<<endl;
 		myParticle.currentFitness=fitnessValue;
 		fitnessNormalization=fitnessValue;
 		
@@ -449,6 +449,7 @@ int main(int argc, char* argv[]){
 			myParticle.lastFitness=myParticle.currentFitness;
 			fitnessValue=fitnessFunction(outDist,testMeans,testVariances);
 			myParticle.currentFitness=fitnessValue;
+			cout<<fitnessValue<<endl;
 
 			if(myParticle.currentFitness<myParticle.bestFitness){
 				myParticle.normBestPos=myParticle.normCurrentPos;
